@@ -423,8 +423,9 @@ async function loginUser(e){
   }catch(err){showAuthError(err.message||'تعذر تسجيل الدخول حالياً.')}finally{btn.disabled=false;btn.textContent='دخول'}
 }
 async function verifyCurrentDevice(){
-  const {data:{session}}=await sb.auth.getSession();if(!session)throw new Error('انتهت الجلسة. سجل الدخول من جديد.');
-  return await invokeEdge('generator-device-check',currentDevicePayload());
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session||!session.user)throw new Error('انتهت الجلسة. سجل الدخول من جديد.');
+  return await invokeEdge('generator-device-check',{user_id:session.user.id,...currentDevicePayload()});
 }
 function registerOwner(e){e.preventDefault();showAuthError('إنشاء الحسابات متاح للأدمن الرئيسي فقط من داخل لوحة الإدارة.')}
 async function loadCurrentProfile(){
