@@ -36,6 +36,7 @@
 .superadmin-note{background:#faf5ff;border:1px solid #e9d5ff;border-right:5px solid #7c3aed;border-radius:14px;padding:12px 14px;margin-bottom:14px;color:#5b21b6;font-size:13px;line-height:1.8}
 
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -68,14 +69,14 @@
 
 <div class="app">
 <header class="top">
-  <div class="brand"><div class="logo">⚡</div><div><h1 id="appTitle">إدارة المولدة</h1><small>نسخة تجريبية — البيانات والأسماء وهمية</small></div></div>
+  <div class="brand"><div class="logo">⚡</div><div><h1 id="appTitle">إدارة المولدة</h1><small>إدارة المولدة — بيانات سحابية</small></div></div>
   <div class="actions"><div class="user-chip" id="currentUserChip"></div><button class="iconbtn hide-mobile" onclick="exportData()">نسخة احتياطية</button><button class="iconbtn" onclick="openSettings()">⚙</button><button class="logout-btn" onclick="logoutUser()" title="تسجيل الخروج">خروج</button></div>
 </header>
 <div class="layout">
 <aside class="side"><div class="nav" id="sideNav"></div></aside>
 <main class="main">
 <section class="view active" id="dashboard">
-<div class="note" style="margin-bottom:14px;border-color:#f59e0b;background:#fffbeb"><b>نسخة تجريبية:</b> جميع الأسماء والأرقام والعناوين والحسابات الموجودة هنا وهمية فقط لمعاينة البرنامج.</div>
+<div class="note" style="margin-bottom:14px;border-color:#22c55e;background:#f0fdf4"><b>متصل سحابياً:</b> البيانات محفوظة بحساب صاحب المولدة وتظهر له من أي جهاز بعد تسجيل الدخول.</div>
 <div class="section-title"><div><h2>لوحة التحكم</h2><p id="todayText"></p></div><button class="btn" onclick="openCollection()">+ جباية جديدة</button></div>
 <div class="grid stats">
   <div class="card stat"><div class="k">عدد المشتركين</div><div class="v" id="stSubs">0</div><div class="trend">المشتركين المسجلين</div></div>
@@ -172,7 +173,7 @@
 <div class="full"><div class="note" style="margin-bottom:10px">هذه الأسعار افتراضية لتسريع الإدخال، ويمكن تغيير السعر داخل كل عملية شراء أو مصروف عند الحاجة.</div><button class="btn green" onclick="saveSettings()">حفظ الإعدادات</button></div>
 </div></div>
 <div style="height:14px"></div>
-<div class="card no-print"><h3 style="margin-top:0">النسخ الاحتياطي</h3><div class="toolbar"><button class="btn secondary" onclick="exportData()">تنزيل نسخة JSON</button><label class="btn secondary" style="cursor:pointer">استيراد نسخة<input type="file" id="importFile" accept="application/json" hidden onchange="importData(event)"></label><button class="btn red" onclick="resetAll()">مسح كل البيانات</button></div><div class="note">يتم حفظ البيانات داخل نفس الجهاز والمتصفح. نزّل نسخة احتياطية بشكل دوري.</div></div>
+<div class="card no-print"><h3 style="margin-top:0">النسخ الاحتياطي</h3><div class="toolbar"><button class="btn secondary" onclick="exportData()">تنزيل نسخة JSON</button><label class="btn secondary" style="cursor:pointer">استيراد نسخة<input type="file" id="importFile" accept="application/json" hidden onchange="importData(event)"></label><button class="btn red" onclick="resetAll()">مسح كل البيانات</button></div><div class="note">يتم حفظ البيانات في Supabase حسب حساب صاحب المولدة. ويمكن تنزيل نسخة JSON إضافية للاحتياط.</div></div>
 </section>
 <div class="footer-space"></div>
 </main>
@@ -186,8 +187,8 @@ const KEY='generatorManagerDB_demo_v2_40';
 const monthNow=()=>new Date().toISOString().slice(0,7);
 const today=()=>new Date().toISOString().slice(0,10);
 const fmt=n=>Number(n||0).toLocaleString('ar-IQ')+' د.ع';
-const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-let db=loadDB();
+const uid=()=>crypto.randomUUID ? crypto.randomUUID() : ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));
+let db=blankDB();
 function defaultDB(){
   const m=monthNow(), d=n=>`${m}-${String(n).padStart(2,'0')}`;
   const subscribers=[
@@ -254,8 +255,10 @@ function defaultDB(){
   ];
   return {settings:{name:'مولدة النور — تجريبي',owner:'صاحب المولدة',phone:'0770 000 9999',area:'منطقة تجريبية',ampPrice:18000,fuelPrice:750,oilPrice:7000,workerCost:120000,operatingCost:50000,currency:'د.ع'},subscribers,collections,expenses,fuel,maintenance};
 }
-function loadDB(){try{const saved=JSON.parse(localStorage.getItem(KEY));if(!saved)return defaultDB();const defs=defaultDB();saved.settings={...defs.settings,...(saved.settings||{})};saved.subscribers=saved.subscribers||[];saved.collections=saved.collections||[];saved.expenses=saved.expenses||[];saved.fuel=saved.fuel||[];saved.maintenance=saved.maintenance||[];return saved}catch(e){return defaultDB()}}
-function save(){localStorage.setItem(KEY,JSON.stringify(db));renderAll()}
+function blankDB(){return {settings:{name:'إدارة المولدة',owner:'',phone:'',area:'',ampPrice:18000,fuelPrice:0,oilPrice:0,workerCost:0,operatingCost:0,currency:'د.ع'},subscribers:[],collections:[],expenses:[],fuel:[],maintenance:[]}}
+function loadDB(){return blankDB()}
+let syncTimer=null,syncBusy=false,syncQueued=false;
+function save(){renderAll();if(currentWorkspaceId){clearTimeout(syncTimer);syncTimer=setTimeout(()=>syncRemoteDB().catch(e=>{console.error(e);showCloudState('تعذر حفظ آخر تعديل','bad')}),250)}}
 const navItems=[['dashboard','الرئيسية','⌂'],['subscribers','المشتركين','👥'],['collections','الجباية','💵'],['debts','الديون','⚠'],['expenses','المصاريف','🧾'],['fuel','الوقود','⛽'],['maintenance','الصيانة','🔧'],['reports','التقارير','📊'],['settings','الإعدادات','⚙']];
 function isSuperAdmin(){return currentAccount()?.role==='superadmin'}
 function initNav(){
@@ -312,98 +315,125 @@ function saveSettings(){db.settings={...db.settings,name:setName.value.trim()||'
 function openSettings(){showView('settings')}
 function exportData(){const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`generator-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
 function importData(ev){const file=ev.target.files[0];if(!file)return;const r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);if(!d.subscribers||!d.settings)throw 0;db=d;save();alert('تم استيراد النسخة')}catch(e){alert('ملف غير صالح')}};r.readAsText(file)}
-function resetAll(){if(confirm('سيتم حذف جميع البيانات نهائياً. متأكد؟')){localStorage.removeItem(KEY);db=defaultDB();save();fillSettings()}}
+function resetAll(){if(confirm('سيتم حذف جميع بيانات هذه المولدة نهائياً من السحابة. متأكد؟')){db=blankDB();save();fillSettings()}}
 function exportSubscribersCSV(){let m=monthNow();let rows=[['الاسم','الأمبيرات','رقم الجوزة','الهاتف','المنطقة','العنوان','الحساب','المدفوع','المتبقي','الحالة'],...db.subscribers.map(s=>{let due=monthlyDue(s),paid=paidFor(s.id,m),remain=Math.max(0,due-paid),st=statusFor(s,m);return[s.name,s.amps,s.fuseNo||'',s.phone,s.area,s.address,due,paid,remain,st==='paid'?'دافع':st==='partial'?'دافع جزء':'غير دافع']})];let csv='\ufeff'+rows.map(r=>r.map(v=>`"${String(v??'').replaceAll('"','""')}"`).join(',')).join('\n');let blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='subscribers.csv';a.click();URL.revokeObjectURL(a.href)}
 function printReceipt(id){let c=db.collections.find(x=>x.id===id),s=db.subscribers.find(x=>x.id===c.subId);if(!c||!s)return;let w=window.open('','_blank','width=500,height=700');let due=monthlyDue(s),remain=Math.max(0,due-paidFor(s.id,c.month));w.document.write(`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>وصل قبض</title><style>body{font-family:Tahoma;padding:30px;color:#111}.r{display:flex;justify-content:space-between;border-bottom:1px dashed #bbb;padding:10px 0}h2{text-align:center}.box{border:2px solid #111;border-radius:16px;padding:20px}.small{color:#666;font-size:13px;text-align:center;margin-top:18px}</style></head><body><div class="box"><h2>${esc(db.settings.name)}</h2><div class="r"><span>وصل قبض</span><b>${c.date}</b></div><div class="r"><span>المشترك</span><b>${esc(s.name)}</b></div><div class="r"><span>الشهر</span><b>${c.month}</b></div><div class="r"><span>عدد الأمبيرات</span><b>${s.amps}</b></div><div class="r"><span>رقم الجوزة</span><b>${esc(s.fuseNo||'-')}</b></div><div class="r"><span>العنوان</span><b>${esc([s.area,s.address].filter(Boolean).join(' - ')||'-')}</b></div><div class="r"><span>المطلوب</span><b>${fmt(due)}</b></div><div class="r"><span>المبلغ المستلم</span><b>${fmt(c.amount)}</b></div><div class="r"><span>المتبقي</span><b>${fmt(remain)}</b></div><div class="r"><span>طريقة الدفع</span><b>${esc(c.method)}</b></div><div class="small">${esc(db.settings.owner||'')} ${db.settings.phone?'— '+esc(db.settings.phone):''}</div></div><script>window.onload=()=>window.print()<\/script></body></html>`);w.document.close()}
 function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}function attr(s=''){return esc(s)}
-// ===== نظام الحساب والصلاحيات =====
-const ACCOUNTS_KEY='generatorManagerAccounts_v1';
-const SESSION_KEY='generatorManagerSession_v1';
-let appBooted=false;
-function getAccounts(){try{return JSON.parse(localStorage.getItem(ACCOUNTS_KEY)||'[]')}catch(e){return[]}}
-function setAccounts(v){localStorage.setItem(ACCOUNTS_KEY,JSON.stringify(v))}
+// ===== Supabase: الحسابات والصلاحيات والبيانات السحابية =====
+const SUPABASE_URL='https://mjzbhaxahwvmtzssavpy.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_P4vOe1epNoi8JiA9n4GA2Q_QrmtDD2V';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+const FN_BASE=SUPABASE_URL+'/functions/v1';
+let appBooted=false,currentAccountState=null,currentProfile=null,currentWorkspaceId=null;
 function normalizeUsername(v){return String(v||'').trim().toLowerCase()}
-function simpleHash(str){
-  let h1=0xdeadbeef^str.length,h2=0x41c6ce57^str.length;
-  for(let i=0,ch;i<str.length;i++){ch=str.charCodeAt(i);h1=Math.imul(h1^ch,2654435761);h2=Math.imul(h2^ch,1597334677)}
-  h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);
-  h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);
-  return (4294967296*(2097151&h2)+(h1>>>0)).toString(36)
-}
-function passwordHash(username,password){return simpleHash('GM|'+normalizeUsername(username)+'|'+String(password))}
-function currentAccount(){const sid=localStorage.getItem(SESSION_KEY);if(!sid)return null;return getAccounts().find(a=>a.id===sid)||null}
-function ensureSuperAdmin(){
-  const accounts=getAccounts();if(!accounts.length)return;
-  if(!accounts.some(a=>a.role==='superadmin')){
-    accounts[0].role='superadmin';accounts[0].enabled=true;accounts[0].generatorName=accounts[0].generatorName||db?.settings?.name||'الإدارة الرئيسية';setAccounts(accounts)
-  }
-}
+function currentAccount(){return currentAccountState}
 function showAuthError(msg){const el=document.getElementById('authError');el.textContent=msg;el.classList.add('show')}
 function clearAuthError(){const el=document.getElementById('authError');el.textContent='';el.classList.remove('show')}
-function switchAuthMode(mode){
-  clearAuthError();const accounts=getAccounts(),hasAccounts=accounts.length>0;
-  const login=document.getElementById('loginForm'),reg=document.getElementById('registerForm'),title=document.getElementById('authTitle'),sub=document.getElementById('authSub'),sw=document.getElementById('authSwitch');
-  if(!hasAccounts){
-    login.style.display='none';reg.style.display='grid';title.textContent='إنشاء الأدمن الرئيسي';sub.textContent='تهيئة أول حساب للإدارة. بعد ذلك لن يظهر إنشاء الحساب للمستخدمين.';sw.innerHTML='';
-  }else{
-    reg.style.display='none';login.style.display='grid';title.textContent='تسجيل الدخول';sub.textContent='أدخل اسم المستخدم وكلمة المرور التي استلمتها من الأدمن الرئيسي.';sw.innerHTML='';
-  }
+function switchAuthMode(){clearAuthError();document.getElementById('registerForm').style.display='none';document.getElementById('loginForm').style.display='grid';document.getElementById('authTitle').textContent='تسجيل الدخول';document.getElementById('authSub').textContent='أدخل اسم المستخدم والرمز الذي استلمته من الأدمن الرئيسي.';document.getElementById('authSwitch').innerHTML=''}
+function showCloudState(msg,type='ok'){let el=document.getElementById('cloudState');if(!el){el=document.createElement('div');el.id='cloudState';el.style.cssText='position:fixed;left:14px;bottom:76px;z-index:1000;padding:9px 12px;border-radius:10px;font-size:12px;box-shadow:0 4px 16px #0002;transition:.2s';document.body.appendChild(el)}el.textContent=msg;el.style.background=type==='bad'?'#fee2e2':'#dcfce7';el.style.color=type==='bad'?'#991b1b':'#166534';el.style.display='block';clearTimeout(el._t);el._t=setTimeout(()=>el.style.display='none',2400)}
+
+async function loginUser(e){
+  e.preventDefault();clearAuthError();
+  const btn=e.target.querySelector('button[type="submit"]'),username=normalizeUsername(document.getElementById('loginUsername').value),password=document.getElementById('loginPassword').value;
+  if(!username||!password)return showAuthError('أدخل اسم المستخدم والرمز.');
+  btn.disabled=true;btn.textContent='جاري الدخول...';
+  try{
+    const r=await fetch(FN_BASE+'/generator-login',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify({username,password})});
+    const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'اسم المستخدم أو كلمة المرور غير صحيحة.');
+    const {error}=await sb.auth.setSession({access_token:j.access_token,refresh_token:j.refresh_token});if(error)throw error;
+    await enterFromSession();
+  }catch(err){showAuthError(err.message||'تعذر تسجيل الدخول.')}finally{btn.disabled=false;btn.textContent='دخول'}
 }
-function registerOwner(e){
-  e.preventDefault();clearAuthError();if(getAccounts().length)return showAuthError('إنشاء الحسابات متاح للأدمن الرئيسي فقط.');
-  const name=document.getElementById('regName').value.trim(),username=normalizeUsername(document.getElementById('regUsername').value),phone=document.getElementById('regPhone').value.trim(),p1=document.getElementById('regPassword').value,p2=document.getElementById('regPassword2').value;
-  if(!name||!username)return showAuthError('أدخل الاسم واسم المستخدم.');if(/\s/.test(username))return showAuthError('اسم المستخدم يجب أن يكون بدون فراغات.');if(p1.length<4)return showAuthError('كلمة المرور يجب أن تكون 4 أحرف أو أرقام على الأقل.');if(p1!==p2)return showAuthError('تأكيد كلمة المرور غير مطابق.');
-  const account={id:'acc_'+uid(),name,username,phone,generatorName:'الإدارة الرئيسية',role:'superadmin',enabled:true,passwordHash:passwordHash(username,p1),createdAt:Date.now()};setAccounts([account]);localStorage.setItem(SESSION_KEY,account.id);enterApp(account)
+function registerOwner(e){e.preventDefault();showAuthError('إنشاء الحسابات متاح للأدمن الرئيسي فقط من داخل لوحة الإدارة.')}
+async function loadCurrentProfile(){
+  const {data:{user},error:ue}=await sb.auth.getUser();if(ue||!user)return null;
+  const {data:p,error}=await sb.from('generator_profiles').select('*').eq('user_id',user.id).maybeSingle();if(error)throw error;if(!p||p.active===false)throw new Error('الحساب غير فعال.');
+  currentProfile=p;currentWorkspaceId=p.workspace_id||null;
+  currentAccountState={id:p.user_id,name:p.display_name||p.username,username:p.username,role:p.role==='super_admin'?'superadmin':'owner',enabled:p.active!==false,workspaceId:p.workspace_id||null};
+  return currentAccountState
 }
-function loginUser(e){
-  e.preventDefault();clearAuthError();ensureSuperAdmin();
-  const username=normalizeUsername(document.getElementById('loginUsername').value),password=document.getElementById('loginPassword').value,a=getAccounts().find(x=>x.username===username);
-  if(!a||a.passwordHash!==passwordHash(username,password))return showAuthError('اسم المستخدم أو كلمة المرور غير صحيحة.');if(a.enabled===false)return showAuthError('هذا الحساب موقوف من الأدمن الرئيسي.');
-  localStorage.setItem(SESSION_KEY,a.id);enterApp(a)
-}
-function enterApp(account){
+async function enterFromSession(){
+  const a=await loadCurrentProfile();if(!a){await sb.auth.signOut();throw new Error('الحساب غير مربوط بنظام المولدات.');}
+  if(currentWorkspaceId)await loadRemoteDB();else db=blankDB();
   document.getElementById('authScreen').classList.remove('show');document.querySelector('.app').classList.remove('auth-locked');
-  const chip=document.getElementById('currentUserChip'),role=account.role==='superadmin'?'أدمن رئيسي':'صاحب مولدة';
-  if(chip){chip.innerHTML='<span class="avatar">'+esc((account.name||account.username).slice(0,1))+'</span><span class="who"><b>'+esc(account.name||account.username)+'</b><small>'+role+' • @'+esc(account.username)+'</small></span>'}
-  bootApp()
+  const chip=document.getElementById('currentUserChip'),role=a.role==='superadmin'?'أدمن رئيسي':'صاحب مولدة';
+  if(chip)chip.innerHTML='<span class="avatar">'+esc((a.name||a.username).slice(0,1))+'</span><span class="who"><b>'+esc(a.name||a.username)+'</b><small>'+role+' • @'+esc(a.username)+'</small></span>';
+  await bootApp();
 }
-function logoutUser(){if(!confirm('تسجيل الخروج من الحساب؟'))return;localStorage.removeItem(SESSION_KEY);location.reload()}
+async function logoutUser(){if(!confirm('تسجيل الخروج من الحساب؟'))return;await sb.auth.signOut();location.reload()}
+
+async function loadRemoteDB(){
+  if(!currentWorkspaceId){db=blankDB();return}
+  showCloudState('جاري تحميل البيانات...');
+  const [wr,sr,pr,er,fr,mr]=await Promise.all([
+    sb.from('generator_workspaces').select('*').eq('id',currentWorkspaceId).single(),
+    sb.from('generator_subscribers').select('*').eq('workspace_id',currentWorkspaceId).order('created_at'),
+    sb.from('generator_payments').select('*').eq('workspace_id',currentWorkspaceId).order('payment_date'),
+    sb.from('generator_expenses').select('*').eq('workspace_id',currentWorkspaceId).order('expense_date'),
+    sb.from('generator_fuel').select('*').eq('workspace_id',currentWorkspaceId).order('fuel_date'),
+    sb.from('generator_maintenance').select('*').eq('workspace_id',currentWorkspaceId).order('maintenance_date')
+  ]);
+  for(const r of [wr,sr,pr,er,fr,mr])if(r.error)throw r.error;
+  const w=wr.data||{};
+  db={settings:{name:w.generator_name||'إدارة المولدة',owner:w.owner_name||'',phone:w.phone||'',area:w.address||'',ampPrice:Number(w.amp_price||0),fuelPrice:Number(w.fuel_liter_price||0),oilPrice:Number(w.oil_price||0),workerCost:Number(w.worker_cost||0),operatingCost:Number(w.operating_cost||0),currency:'د.ع'},
+    subscribers:(sr.data||[]).map(x=>({id:x.id,name:x.full_name||'',phone:x.phone||'',area:x.area||'',address:x.address||'',amps:Number(x.amps||0),fuseNo:x.jawza_number||'',notes:x.notes||'',createdAt:new Date(x.created_at||Date.now()).getTime()})),
+    collections:(pr.data||[]).map(x=>({id:x.id,subId:x.subscriber_id,month:(x.bill_month||String(x.payment_date||'').slice(0,7)).slice(0,7),amount:Number(x.amount||0),date:String(x.payment_date||'').slice(0,10),method:x.method||'نقدي',notes:x.notes||'',createdAt:new Date(x.created_at||x.payment_date||Date.now()).getTime()})),
+    expenses:(er.data||[]).map(x=>({id:x.id,type:x.category||'أخرى',title:x.title||x.description||'',qty:Number(x.qty||1),unitPrice:Number(x.unit_price||0),amount:Number(x.amount||0),date:x.expense_date,notes:x.notes||x.description||''})),
+    fuel:(fr.data||[]).map(x=>({id:x.id,liters:Number(x.liters||0),price:Number(x.price_per_liter||0),total:Number(x.total_cost||0),date:x.fuel_date,notes:x.notes||x.supplier||''})),
+    maintenance:(mr.data||[]).map(x=>({id:x.id,title:x.maintenance_type||x.description||'',cost:Number(x.cost||0),tech:x.technician||'',date:x.maintenance_date,notes:x.description||''}))};
+  showCloudState('تم تحميل البيانات')
+}
+
+async function syncRemoteDB(){
+  if(!currentWorkspaceId)return;if(syncBusy){syncQueued=true;return}syncBusy=true;syncQueued=false;
+  const snap=JSON.parse(JSON.stringify(db));
+  try{
+    let r=await sb.from('generator_workspaces').update({generator_name:snap.settings.name||'إدارة المولدة',owner_name:snap.settings.owner||'',phone:snap.settings.phone||'',address:snap.settings.area||'',amp_price:Number(snap.settings.ampPrice||0),fuel_liter_price:Number(snap.settings.fuelPrice||0),oil_price:Number(snap.settings.oilPrice||0),worker_cost:Number(snap.settings.workerCost||0),operating_cost:Number(snap.settings.operatingCost||0)}).eq('id',currentWorkspaceId);if(r.error)throw r.error;
+    for(const table of ['generator_payments','generator_bills','generator_expenses','generator_fuel','generator_maintenance']){let d=await sb.from(table).delete().eq('workspace_id',currentWorkspaceId);if(d.error)throw d.error}
+    let ds=await sb.from('generator_subscribers').delete().eq('workspace_id',currentWorkspaceId);if(ds.error)throw ds.error;
+    if(snap.subscribers.length){const rows=snap.subscribers.map(x=>({id:x.id,workspace_id:currentWorkspaceId,full_name:x.name,amps:Number(x.amps||0),jawza_number:x.fuseNo||null,phone:x.phone||null,area:x.area||null,address:x.address||null,notes:x.notes||null,active:true}));let q=await sb.from('generator_subscribers').insert(rows);if(q.error)throw q.error}
+    if(snap.collections.length){const rows=snap.collections.map(x=>({id:x.id,workspace_id:currentWorkspaceId,subscriber_id:x.subId,bill_id:null,bill_month:(x.month||monthNow())+'-01',amount:Number(x.amount||0),payment_date:(x.date||today())+'T12:00:00Z',method:x.method||'نقدي',notes:x.notes||null}));let q=await sb.from('generator_payments').insert(rows);if(q.error)throw q.error}
+    if(snap.expenses.length){const rows=snap.expenses.map(x=>({id:x.id,workspace_id:currentWorkspaceId,expense_date:x.date||today(),category:x.type||'أخرى',title:x.title||'',qty:Number(x.qty||1),unit_price:Number(x.unitPrice||0),amount:Number(x.amount||0),description:x.notes||null,notes:x.notes||null}));let q=await sb.from('generator_expenses').insert(rows);if(q.error)throw q.error}
+    if(snap.fuel.length){const rows=snap.fuel.map(x=>({id:x.id,workspace_id:currentWorkspaceId,fuel_date:x.date||today(),liters:Number(x.liters||0),price_per_liter:Number(x.price||0),supplier:null,notes:x.notes||null}));let q=await sb.from('generator_fuel').insert(rows);if(q.error)throw q.error}
+    if(snap.maintenance.length){const rows=snap.maintenance.map(x=>({id:x.id,workspace_id:currentWorkspaceId,maintenance_date:x.date||today(),maintenance_type:x.title||'',description:x.notes||null,cost:Number(x.cost||0),technician:x.tech||null}));let q=await sb.from('generator_maintenance').insert(rows);if(q.error)throw q.error}
+    showCloudState('تم الحفظ في السحابة')
+  }finally{syncBusy=false;if(syncQueued)setTimeout(()=>syncRemoteDB(),100)}
+}
+
+async function callAdminFunction(payload){
+  const {data:{session}}=await sb.auth.getSession();if(!session)throw new Error('انتهت الجلسة. سجل الدخول من جديد.');
+  const r=await fetch(FN_BASE+'/generator-admin-users',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify(payload)});
+  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'تعذر تنفيذ العملية.');return j
+}
 
 // إدارة الحسابات — للأدمن الرئيسي فقط
-function renderAccounts(){
-  if(!isSuperAdmin())return;const q=(document.getElementById('accountSearch')?.value||'').trim().toLowerCase();const all=getAccounts(),arr=all.filter(a=>[a.name,a.username,a.phone,a.generatorName].join(' ').toLowerCase().includes(q));
-  document.getElementById('accTotal').textContent=all.length;document.getElementById('accActive').textContent=all.filter(a=>a.enabled!==false).length;document.getElementById('accDisabled').textContent=all.filter(a=>a.enabled===false).length;
-  const body=document.getElementById('accountsBody');if(!body)return;
-  body.innerHTML=arr.length?arr.map((a,i)=>{const admin=a.role==='superadmin',enabled=a.enabled!==false,date=new Date(a.createdAt||Date.now()).toLocaleDateString('ar-IQ');return `<tr><td>${i+1}</td><td><b>${esc(a.name||'-')}</b></td><td>${esc(a.generatorName||'-')}</td><td><b style="direction:ltr;display:inline-block">${esc(a.username)}</b></td><td><span class="phone-nowrap">${esc(a.phone||'-')}</span></td><td><span class="role-badge ${admin?'superadmin':'owner'}">${admin?'أدمن رئيسي':'صاحب مولدة'}</span></td><td><span class="badge ${enabled?'paid':'due'}">${enabled?'فعال':'موقوف'}</span></td><td>${date}</td><td><div class="account-actions">${admin?'<span style="font-size:12px;color:#6b7280">الحساب الرئيسي</span>':`<button class="btn small secondary" onclick="resetOwnerPassword('${a.id}')">تغيير الرمز</button><button class="btn small ${enabled?'red':'green'}" onclick="toggleOwnerAccount('${a.id}')">${enabled?'إيقاف':'تفعيل'}</button><button class="btn small red" onclick="deleteOwnerAccount('${a.id}')">حذف</button>`}</div></td></tr>`}).join(''):`<tr><td colspan="9" class="empty">لا توجد حسابات</td></tr>`
+async function renderAccounts(){
+  if(!isSuperAdmin())return;const body=document.getElementById('accountsBody');if(!body)return;body.innerHTML='<tr><td colspan="9" class="empty">جاري تحميل الحسابات...</td></tr>';
+  const q=(document.getElementById('accountSearch')?.value||'').trim().toLowerCase();
+  const [{data:profiles,error:pe},{data:workspaces,error:we}]=await Promise.all([sb.from('generator_profiles').select('*').order('created_at'),sb.from('generator_workspaces').select('*')]);if(pe||we){body.innerHTML='<tr><td colspan="9" class="empty">تعذر تحميل الحسابات</td></tr>';return}
+  const wm=new Map((workspaces||[]).map(w=>[w.id,w]));const all=(profiles||[]).map(p=>{const w=wm.get(p.workspace_id)||{};return{id:p.user_id,name:p.display_name||w.owner_name||p.username,username:p.username,phone:w.phone||'',generatorName:w.generator_name|| (p.role==='super_admin'?'الإدارة الرئيسية':''),role:p.role==='super_admin'?'superadmin':'owner',enabled:p.active!==false,createdAt:p.created_at,workspaceId:p.workspace_id}});const arr=all.filter(a=>[a.name,a.username,a.phone,a.generatorName].join(' ').toLowerCase().includes(q));
+  document.getElementById('accTotal').textContent=all.length;document.getElementById('accActive').textContent=all.filter(a=>a.enabled).length;document.getElementById('accDisabled').textContent=all.filter(a=>!a.enabled).length;
+  body.innerHTML=arr.length?arr.map((a,i)=>{const admin=a.role==='superadmin',enabled=a.enabled,date=new Date(a.createdAt||Date.now()).toLocaleDateString('ar-IQ');return `<tr><td>${i+1}</td><td><b>${esc(a.name||'-')}</b></td><td>${esc(a.generatorName||'-')}</td><td><b style="direction:ltr;display:inline-block">${esc(a.username)}</b></td><td><span class="phone-nowrap">${esc(a.phone||'-')}</span></td><td><span class="role-badge ${admin?'superadmin':'owner'}">${admin?'أدمن رئيسي':'صاحب مولدة'}</span></td><td><span class="badge ${enabled?'paid':'due'}">${enabled?'فعال':'موقوف'}</span></td><td>${date}</td><td><div class="account-actions">${admin?'<span style="font-size:12px;color:#6b7280">الحساب الرئيسي</span>':`<button class="btn small secondary" onclick="resetOwnerPassword('${a.id}','${attr(a.name)}')">تغيير الرمز</button><button class="btn small ${enabled?'red':'green'}" onclick="toggleOwnerAccount('${a.id}',${enabled})">${enabled?'إيقاف':'تفعيل'}</button><button class="btn small red" onclick="deleteOwnerAccount('${a.id}','${attr(a.name)}')">حذف</button>`}</div></td></tr>`}).join(''):`<tr><td colspan="9" class="empty">لا توجد حسابات</td></tr>`
 }
 function openCreateOwnerAccount(){
-  if(!isSuperAdmin())return;openModal('إنشاء حساب صاحب مولدة',`<form onsubmit="createOwnerAccount(event)"><div class="form-grid"><div class="field"><label>اسم صاحب المولدة *</label><input name="name" required></div><div class="field"><label>اسم المولدة</label><input name="generatorName" placeholder="مثال: مولدة النور"></div><div class="field"><label>رقم الهاتف</label><input name="phone" inputmode="tel" placeholder="07xxxxxxxxx"></div><div class="field"><label>اسم المستخدم *</label><input name="username" required autocomplete="off" placeholder="مثال: noor01"></div><div class="field"><label>كلمة المرور *</label><input name="password" type="password" required minlength="4" autocomplete="new-password"></div><div class="field"><label>تأكيد كلمة المرور *</label><input name="password2" type="password" required minlength="4" autocomplete="new-password"></div><div class="full"><button class="btn green">إنشاء الحساب</button></div></div></form>`)
+  if(!isSuperAdmin())return;openModal('إنشاء حساب صاحب مولدة',`<form onsubmit="createOwnerAccount(event)"><div class="form-grid"><div class="field"><label>اسم صاحب المولدة *</label><input name="name" required></div><div class="field"><label>اسم المولدة *</label><input name="generatorName" required placeholder="مثال: مولدة النور"></div><div class="field"><label>رقم الهاتف</label><input name="phone" inputmode="tel" placeholder="07xxxxxxxxx"></div><div class="field"><label>العنوان/المنطقة</label><input name="address"></div><div class="field"><label>اسم المستخدم *</label><input name="username" required autocomplete="off" placeholder="مثال: noor01"></div><div class="field"><label>كلمة المرور *</label><input name="password" type="password" required minlength="6" autocomplete="new-password"></div><div class="field"><label>تأكيد كلمة المرور *</label><input name="password2" type="password" required minlength="6" autocomplete="new-password"></div><div class="full"><button class="btn green">إنشاء الحساب</button></div></div></form>`)
 }
-function createOwnerAccount(e){
-  e.preventDefault();if(!isSuperAdmin())return;const f=new FormData(e.target),name=String(f.get('name')||'').trim(),generatorName=String(f.get('generatorName')||'').trim(),phone=String(f.get('phone')||'').trim(),username=normalizeUsername(f.get('username')),password=String(f.get('password')||''),p2=String(f.get('password2')||'');
-  if(!name||!username)return alert('أدخل الاسم واسم المستخدم.');if(/\s/.test(username))return alert('اسم المستخدم بدون فراغات.');if(password.length<4)return alert('كلمة المرور 4 أحرف أو أرقام على الأقل.');if(password!==p2)return alert('تأكيد كلمة المرور غير مطابق.');const accounts=getAccounts();if(accounts.some(a=>a.username===username))return alert('اسم المستخدم مستخدم مسبقاً.');
-  const a={id:'acc_'+uid(),name,username,phone,generatorName,role:'owner',enabled:true,passwordHash:passwordHash(username,password),createdAt:Date.now()};accounts.push(a);setAccounts(accounts);closeModal();renderAccounts();
-  openModal('تم إنشاء الحساب',`<div class="account-credential-box"><b>سلّم هذه البيانات لصاحب المولدة:</b><br>اسم المستخدم: <code>${esc(username)}</code><br>كلمة المرور: <code>${esc(password)}</code>${generatorName?'<br>المولدة: <b>'+esc(generatorName)+'</b>':''}</div><div class="note">لن تظهر كلمة المرور مرة أخرى. إذا نسيها المستخدم استخدم زر «تغيير الرمز» من إدارة الحسابات.</div><div style="margin-top:12px"><button class="btn" onclick="closeModal()">تم</button></div>`)
+async function createOwnerAccount(e){
+  e.preventDefault();if(!isSuperAdmin())return;const f=new FormData(e.target),name=String(f.get('name')||'').trim(),generatorName=String(f.get('generatorName')||'').trim(),phone=String(f.get('phone')||'').trim(),address=String(f.get('address')||'').trim(),username=normalizeUsername(f.get('username')),password=String(f.get('password')||''),p2=String(f.get('password2')||'');
+  if(!name||!generatorName||!username)return alert('أدخل اسم صاحب المولدة واسم المولدة واسم المستخدم.');if(/\s/.test(username))return alert('اسم المستخدم بدون فراغات.');if(password.length<6)return alert('كلمة المرور 6 أحرف أو أرقام على الأقل.');if(password!==p2)return alert('تأكيد كلمة المرور غير مطابق.');
+  const btn=e.target.querySelector('button');btn.disabled=true;btn.textContent='جاري الإنشاء...';try{await callAdminFunction({action:'create',name,generatorName,phone,address,username,password});closeModal();await renderAccounts();openModal('تم إنشاء الحساب',`<div class="account-credential-box"><b>سلّم هذه البيانات لصاحب المولدة:</b><br>اسم المستخدم: <code>${esc(username)}</code><br>الرمز: <code>${esc(password)}</code><br>المولدة: <b>${esc(generatorName)}</b></div><div class="note">صاحب المولدة يدخل فقط بالمعرف والرمز، ولا يوجد إنشاء حساب من صفحة الدخول.</div><div style="margin-top:12px"><button class="btn" onclick="closeModal()">تم</button></div>`)}catch(err){alert(err.message)}finally{btn.disabled=false;btn.textContent='إنشاء الحساب'}
 }
-function resetOwnerPassword(id){
-  if(!isSuperAdmin())return;const a=getAccounts().find(x=>x.id===id);if(!a||a.role==='superadmin')return;openModal('تغيير كلمة المرور — '+a.name,`<form onsubmit="saveOwnerPassword(event,'${id}')"><div class="form-grid"><div class="field"><label>كلمة المرور الجديدة *</label><input name="password" type="password" required minlength="4"></div><div class="field"><label>تأكيد كلمة المرور *</label><input name="password2" type="password" required minlength="4"></div><div class="full"><button class="btn green">حفظ كلمة المرور</button></div></div></form>`)
+function resetOwnerPassword(id,name){if(!isSuperAdmin())return;openModal('تغيير الرمز — '+esc(name||''),`<form onsubmit="saveOwnerPassword(event,'${id}')"><div class="form-grid"><div class="field"><label>الرمز الجديد *</label><input name="password" type="password" required minlength="6"></div><div class="field"><label>تأكيد الرمز *</label><input name="password2" type="password" required minlength="6"></div><div class="full"><button class="btn green">حفظ الرمز</button></div></div></form>`)}
+async function saveOwnerPassword(e,id){e.preventDefault();if(!isSuperAdmin())return;const f=new FormData(e.target),p=String(f.get('password')||''),p2=String(f.get('password2')||'');if(p.length<6)return alert('الرمز قصير.');if(p!==p2)return alert('التأكيد غير مطابق.');try{await callAdminFunction({action:'reset_password',userId:id,password:p});closeModal();openModal('تم تغيير الرمز',`<div class="account-credential-box">الرمز الجديد: <code>${esc(p)}</code></div><button class="btn" onclick="closeModal()">تم</button>`)}catch(err){alert(err.message)}}
+async function toggleOwnerAccount(id,enabled){if(!isSuperAdmin())return;try{await callAdminFunction({action:'toggle',userId:id,active:!enabled});await renderAccounts()}catch(err){alert(err.message)}}
+async function deleteOwnerAccount(id,name){if(!isSuperAdmin())return;if(!confirm('حذف حساب '+name+' وجميع بيانات المولدة نهائياً؟'))return;try{await callAdminFunction({action:'delete',userId:id});await renderAccounts()}catch(err){alert(err.message)}}
+async function initAuth(){
+  document.querySelector('.app').classList.add('auth-locked');switchAuthMode();
+  const {data:{session}}=await sb.auth.getSession();if(session){try{await enterFromSession();return}catch(e){console.error(e);await sb.auth.signOut()}}
+  document.getElementById('authScreen').classList.add('show')
 }
-function saveOwnerPassword(e,id){
-  e.preventDefault();if(!isSuperAdmin())return;const f=new FormData(e.target),p=String(f.get('password')||''),p2=String(f.get('password2')||'');if(p.length<4)return alert('كلمة المرور قصيرة.');if(p!==p2)return alert('التأكيد غير مطابق.');const accounts=getAccounts(),i=accounts.findIndex(x=>x.id===id);if(i<0)return;accounts[i].passwordHash=passwordHash(accounts[i].username,p);setAccounts(accounts);closeModal();renderAccounts();openModal('تم تغيير الرمز',`<div class="account-credential-box">اسم المستخدم: <code>${esc(accounts[i].username)}</code><br>كلمة المرور الجديدة: <code>${esc(p)}</code></div><button class="btn" onclick="closeModal()">تم</button>`)
-}
-function toggleOwnerAccount(id){
-  if(!isSuperAdmin())return;const accounts=getAccounts(),i=accounts.findIndex(x=>x.id===id);if(i<0||accounts[i].role==='superadmin')return;accounts[i].enabled=accounts[i].enabled===false?true:false;setAccounts(accounts);renderAccounts()
-}
-function deleteOwnerAccount(id){
-  if(!isSuperAdmin())return;const accounts=getAccounts(),a=accounts.find(x=>x.id===id);if(!a||a.role==='superadmin')return;if(!confirm('حذف حساب '+a.name+' نهائياً؟'))return;setAccounts(accounts.filter(x=>x.id!==id));renderAccounts()
-}
-function initAuth(){
-  ensureSuperAdmin();const accounts=getAccounts(),account=currentAccount();document.querySelector('.app').classList.add('auth-locked');
-  if(account&&account.enabled!==false){enterApp(account);return}if(account&&account.enabled===false)localStorage.removeItem(SESSION_KEY);
-  document.getElementById('authScreen').classList.add('show');switchAuthMode(accounts.length?'login':'bootstrap')
-}
-function bootApp(){
-  if(appBooted)return;appBooted=true;initNav();colMonthFilter.value=monthNow();reportMonth.value=monthNow();renderAll();showView('dashboard');setTimeout(()=>showUnpaidAlert(false),450);if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+async function bootApp(){
+  if(appBooted)return;appBooted=true;initNav();colMonthFilter.value=monthNow();reportMonth.value=monthNow();renderAll();showView(isSuperAdmin()?'accounts':'dashboard');if(currentWorkspaceId)setTimeout(()=>showUnpaidAlert(false),450);if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
 
 initAuth();
