@@ -160,6 +160,40 @@
 </div>
 <div class="toolbar"><input id="accountSearch" class="search" placeholder="بحث بالاسم أو اسم المستخدم أو البريد أو الهاتف أو اسم المولدة..." oninput="renderAccounts()"><button class="btn secondary" onclick="openCreateOwnerAccount()">إنشاء حساب جديد</button></div>
 <div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>اسم المولدة</th><th>اسم المستخدم</th><th>البريد</th><th>الهاتف</th><th>الصلاحية</th><th>الحالة</th><th>تاريخ الإنشاء</th><th>إجراءات</th></tr></thead><tbody id="accountsBody"></tbody></table></div>
+<div style="height:18px"></div>
+<div class="card">
+  <div class="section-title" style="margin-bottom:10px"><div><h3 style="margin:0">طلبات تعديل الحسابات</h3><p>أي تعديل يطلبه صاحب المولدة يبقى معلّقاً إلى أن يوافق الأدمن الرئيسي.</p></div><span class="badge partial" id="pendingAccountRequestsCount">0 معلّق</span></div>
+  <div class="table-wrap"><table><thead><tr><th>صاحب الحساب</th><th>نوع الطلب</th><th>التفاصيل</th><th>التاريخ</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody id="accountRequestsBody"></tbody></table></div>
+</div>
+</section>
+
+<section class="view" id="account-request">
+<div class="section-title"><div><h2>طلب تعديل الحساب</h2><p>لا يتم تغيير بيانات الحساب أو كلمة المرور إلا بعد موافقة الأدمن الرئيسي.</p></div></div>
+<div class="grid two">
+  <div class="card">
+    <h3 style="margin-top:0">طلب تعديل بيانات الحساب</h3>
+    <div class="note" style="margin-bottom:12px">أرسل البيانات المطلوبة. لن تتغير بيانات حسابك مباشرة، بل تصل للأدمن الرئيسي للموافقة أو الرفض.</div>
+    <form id="accountChangeRequestForm" onsubmit="submitAccountChangeRequest(event)">
+      <div class="form-grid">
+        <div class="field"><label>الاسم</label><input id="reqDisplayName" name="name" required></div>
+        <div class="field"><label>اسم المولدة</label><input id="reqGeneratorName" name="generatorName" required></div>
+        <div class="field"><label>اسم المستخدم</label><input id="reqUsername" name="username" required autocomplete="off"></div>
+        <div class="field"><label>البريد الإلكتروني</label><input id="reqEmail" name="email" type="email" autocomplete="off"></div>
+        <div class="field"><label>رقم الهاتف</label><input id="reqPhone" name="phone" inputmode="tel"></div>
+        <div class="field"><label>العنوان/المنطقة</label><input id="reqAddress" name="address"></div>
+        <div class="full"><button class="btn green">إرسال طلب التعديل</button></div>
+      </div>
+    </form>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">كلمة المرور</h3>
+    <div class="note" style="margin-bottom:12px">لا يستطيع صاحب الحساب تغيير كلمة المرور بنفسه. اضغط الطلب أدناه، وبعدها الأدمن الرئيسي يعيّن كلمة مرور جديدة ويسلمها لك.</div>
+    <button class="btn" onclick="requestPasswordReset()">طلب إعادة تعيين كلمة المرور</button>
+    <div style="height:16px"></div>
+    <h3>حالة طلباتي</h3>
+    <div id="myAccountRequests" class="summary-list"></div>
+  </div>
+</div>
 </section>
 
 <section class="view" id="settings">
@@ -170,7 +204,7 @@
 <div class="field"><label>سعر الأمبير الشهري (د.ع)</label><input id="setAmpPrice" type="number" min="0"></div><div class="field"><label>سعر لتر الكاز الافتراضي (د.ع)</label><input id="setFuelPrice" type="number" min="0"></div>
 <div class="field"><label>سعر لتر الزيت الافتراضي (د.ع)</label><input id="setOilPrice" type="number" min="0"></div><div class="field"><label>أجرة العامل الافتراضية (د.ع)</label><input id="setWorkerCost" type="number" min="0"></div>
 <div class="field"><label>مصروف التشغيل الافتراضي (د.ع)</label><input id="setOperatingCost" type="number" min="0"></div><div class="field"><label>عملة العرض</label><select id="setCurrency"><option value="د.ع">دينار عراقي</option></select></div>
-<div class="full"><div class="note" style="margin-bottom:10px">هذه الأسعار افتراضية لتسريع الإدخال، ويمكن تغيير السعر داخل كل عملية شراء أو مصروف عند الحاجة.</div><button class="btn green" onclick="saveSettings()">حفظ الإعدادات</button></div>
+<div class="full"><div class="note" id="settingsIdentityNote" style="margin-bottom:10px">هذه الأسعار افتراضية لتسريع الإدخال، ويمكن تغيير السعر داخل كل عملية شراء أو مصروف عند الحاجة.</div><button class="btn green" onclick="saveSettings()">حفظ الإعدادات</button></div>
 </div></div>
 <div style="height:14px"></div>
 <div class="card no-print"><h3 style="margin-top:0">النسخ الاحتياطي</h3><div class="toolbar"><button class="btn secondary" onclick="exportData()">تنزيل نسخة JSON</button><label class="btn secondary" style="cursor:pointer">استيراد نسخة<input type="file" id="importFile" accept="application/json" hidden onchange="importData(event)"></label><button class="btn red" onclick="resetAll()">مسح كل البيانات</button></div><div class="note">يتم حفظ البيانات في Supabase حسب حساب صاحب المولدة. ويمكن تنزيل نسخة JSON إضافية للاحتياط.</div></div>
@@ -264,15 +298,17 @@ function isSuperAdmin(){return currentAccount()?.role==='superadmin'}
 function initNav(){
   let items=[...navItems];
   if(isSuperAdmin()) items.splice(items.length-1,0,['accounts','إدارة الحسابات','🔐']);
+  else items.splice(items.length-1,0,['account-request','طلب تعديل الحساب','📝']);
   sideNav.innerHTML=items.map(x=>`<button data-v="${x[0]}" onclick="showView('${x[0]}')">${x[2]} &nbsp; ${x[1]}</button>`).join('');
-  mobileNav.innerHTML=items.filter(x=>['dashboard','subscribers','collections','debts','accounts'].includes(x[0])).slice(0,5).map(x=>`<button data-v="${x[0]}" onclick="showView('${x[0]}')">${x[2]}<br>${x[1]}</button>`).join('')
+  mobileNav.innerHTML=items.filter(x=>['dashboard','subscribers','collections','debts','accounts','account-request'].includes(x[0])).slice(0,5).map(x=>`<button data-v="${x[0]}" onclick="showView('${x[0]}')">${x[2]}<br>${x[1]}</button>`).join('')
 }
 function showView(id){
   if(id==='accounts'&&!isSuperAdmin()){id='dashboard'}
+  if(id==='account-request'&&isSuperAdmin()){id='accounts'}
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   const target=document.getElementById(id);if(!target)return;
   target.classList.add('active');document.querySelectorAll('[data-v]').forEach(b=>b.classList.toggle('active',b.dataset.v===id));
-  if(id==='settings')fillSettings();if(id==='reports')renderReports();if(id==='accounts')renderAccounts();window.scrollTo({top:0,behavior:'smooth'})
+  if(id==='settings')fillSettings();if(id==='reports')renderReports();if(id==='accounts')renderAccounts();if(id==='account-request'){fillAccountRequestForm();renderMyAccountRequests()}window.scrollTo({top:0,behavior:'smooth'})
 }
 function renderAll(){document.getElementById('appTitle').textContent=db.settings.name||'إدارة المولدة';todayText.textContent=new Intl.DateTimeFormat('ar-IQ',{dateStyle:'full'}).format(new Date());renderDashboard();renderUnpaidAlert();renderSubscribers();renderCollections();renderDebts();renderExpenses();renderFuel();renderMaintenance();renderReports()}
 function monthlyDue(sub){return Number(sub.amps||0)*Number(db.settings.ampPrice||0)}
@@ -310,8 +346,15 @@ function deleteCollection(id){if(confirm('حذف عملية الجباية؟')){
 function deleteExpense(id){if(confirm('حذف المصروف؟')){db.expenses=db.expenses.filter(x=>x.id!==id);save()}}
 function deleteFuel(id){if(confirm('حذف سجل الوقود؟')){db.fuel=db.fuel.filter(x=>x.id!==id);save()}}
 function deleteMaintenance(id){if(confirm('حذف سجل الصيانة؟')){db.maintenance=db.maintenance.filter(x=>x.id!==id);save()}}
-function fillSettings(){setName.value=db.settings.name||'';setOwner.value=db.settings.owner||'';setPhone.value=db.settings.phone||'';setArea.value=db.settings.area||'';setAmpPrice.value=db.settings.ampPrice||0;setFuelPrice.value=db.settings.fuelPrice||0;setOilPrice.value=db.settings.oilPrice||0;setWorkerCost.value=db.settings.workerCost||0;setOperatingCost.value=db.settings.operatingCost||0;setCurrency.value='د.ع'}
-function saveSettings(){db.settings={...db.settings,name:setName.value.trim()||'إدارة المولدة',owner:setOwner.value.trim(),phone:setPhone.value.trim(),area:setArea.value.trim(),ampPrice:Number(setAmpPrice.value||0),fuelPrice:Number(setFuelPrice.value||0),oilPrice:Number(setOilPrice.value||0),workerCost:Number(setWorkerCost.value||0),operatingCost:Number(setOperatingCost.value||0),currency:'د.ع'};save();alert('تم الحفظ')}
+function fillSettings(){
+  setName.value=db.settings.name||'';setOwner.value=db.settings.owner||'';setPhone.value=db.settings.phone||'';setArea.value=db.settings.area||'';setAmpPrice.value=db.settings.ampPrice||0;setFuelPrice.value=db.settings.fuelPrice||0;setOilPrice.value=db.settings.oilPrice||0;setWorkerCost.value=db.settings.workerCost||0;setOperatingCost.value=db.settings.operatingCost||0;setCurrency.value='د.ع';
+  const locked=!isSuperAdmin();[setName,setOwner,setPhone,setArea].forEach(el=>{el.disabled=locked;el.title=locked?'يتطلب موافقة الأدمن الرئيسي':''});
+  const note=document.getElementById('settingsIdentityNote');if(note)note.textContent=locked?'اسم المولدة واسم المالك والهاتف والعنوان لا تتغير مباشرة. استخدم «طلب تعديل الحساب» ليوافق الأدمن الرئيسي. أما الأسعار التشغيلية فيمكنك تعديلها مباشرة.':'يمكن للأدمن الرئيسي تعديل بيانات الحسابات من صفحة إدارة الحسابات.'
+}
+function saveSettings(){
+  const identity=isSuperAdmin()?{name:setName.value.trim()||'إدارة المولدة',owner:setOwner.value.trim(),phone:setPhone.value.trim(),area:setArea.value.trim()}:{name:db.settings.name,owner:db.settings.owner,phone:db.settings.phone,area:db.settings.area};
+  db.settings={...db.settings,...identity,ampPrice:Number(setAmpPrice.value||0),fuelPrice:Number(setFuelPrice.value||0),oilPrice:Number(setOilPrice.value||0),workerCost:Number(setWorkerCost.value||0),operatingCost:Number(setOperatingCost.value||0),currency:'د.ع'};save();alert('تم الحفظ')
+}
 function openSettings(){showView('settings')}
 function exportData(){const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`generator-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
 function importData(ev){const file=ev.target.files[0];if(!file)return;const r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);if(!d.subscribers||!d.settings)throw 0;db=d;save();alert('تم استيراد النسخة')}catch(e){alert('ملف غير صالح')}};r.readAsText(file)}
@@ -417,6 +460,7 @@ async function renderAccounts(){
   const arr=all.filter(a=>[a.name,a.username,a.email,a.phone,a.generatorName,a.address].join(' ').toLowerCase().includes(q));
   document.getElementById('accTotal').textContent=all.length;document.getElementById('accActive').textContent=all.filter(a=>a.enabled).length;document.getElementById('accDisabled').textContent=all.filter(a=>!a.enabled).length;
   body.innerHTML=arr.length?arr.map((a,i)=>{const admin=a.role==='superadmin',enabled=a.enabled,date=new Date(a.createdAt||Date.now()).toLocaleDateString('ar-IQ');return `<tr><td>${i+1}</td><td><b>${esc(a.name||'-')}</b></td><td>${esc(a.generatorName||'-')}</td><td><b style="direction:ltr;display:inline-block">${esc(a.username)}</b></td><td><span style="direction:ltr;unicode-bidi:isolate;display:inline-block;white-space:nowrap">${esc(a.email||'-')}</span></td><td><span class="phone-nowrap">${esc(a.phone||'-')}</span></td><td><span class="role-badge ${admin?'superadmin':'owner'}">${admin?'أدمن رئيسي':'صاحب مولدة'}</span></td><td><span class="badge ${enabled?'paid':'due'}">${enabled?'فعال':'موقوف'}</span></td><td>${date}</td><td><div class="account-actions"><button class="btn small secondary" onclick="openEditAccount('${a.id}')">تعديل</button>${admin?'':`<button class="btn small ${enabled?'red':'green'}" onclick="toggleOwnerAccount('${a.id}',${enabled})">${enabled?'إيقاف':'تفعيل'}</button><button class="btn small red" onclick="deleteOwnerAccount('${a.id}','${attr(a.name)}')">حذف</button>`}</div></td></tr>`}).join(''):`<tr><td colspan="10" class="empty">لا توجد حسابات</td></tr>`
+  await renderAccountRequests();
 }
 function openCreateOwnerAccount(){
   if(!isSuperAdmin())return;openModal('إنشاء حساب صاحب مولدة',`<form onsubmit="createOwnerAccount(event)"><div class="form-grid"><div class="field"><label>اسم صاحب المولدة *</label><input name="name" required></div><div class="field"><label>اسم المولدة *</label><input name="generatorName" required placeholder="مثال: مولدة النور"></div><div class="field"><label>البريد الإلكتروني</label><input name="email" type="email" autocomplete="off" placeholder="name@example.com"></div><div class="field"><label>رقم الهاتف</label><input name="phone" inputmode="tel" placeholder="07xxxxxxxxx"></div><div class="field"><label>العنوان/المنطقة</label><input name="address"></div><div class="field"><label>اسم المستخدم *</label><input name="username" required autocomplete="off" placeholder="مثال: noor01"></div><div class="field"><label>كلمة المرور *</label><input name="password" type="password" required minlength="6" autocomplete="new-password"></div><div class="field"><label>تأكيد كلمة المرور *</label><input name="password2" type="password" required minlength="6" autocomplete="new-password"></div><div class="full"><button class="btn green">إنشاء الحساب</button></div></div></form>`)
@@ -437,6 +481,56 @@ async function saveAccountEdit(e,id){
 }
 async function toggleOwnerAccount(id,enabled){if(!isSuperAdmin())return;try{await callAdminFunction({action:'toggle',userId:id,active:!enabled});await renderAccounts()}catch(err){alert(err.message)}}
 async function deleteOwnerAccount(id,name){if(!isSuperAdmin())return;if(!confirm('حذف حساب '+name+' وجميع بيانات المولدة نهائياً؟'))return;try{await callAdminFunction({action:'delete',userId:id});await renderAccounts()}catch(err){alert(err.message)}}
+
+// طلبات تعديل الحساب — صاحب المولدة يطلب، والأدمن الرئيسي يوافق أو يرفض
+function fillAccountRequestForm(){
+  if(isSuperAdmin()||!currentProfile)return;
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||''};
+  set('reqDisplayName',currentProfile.display_name||db.settings.owner||'');
+  set('reqGeneratorName',db.settings.name||'');
+  set('reqUsername',currentProfile.username||'');
+  set('reqEmail',currentProfile.email||'');
+  set('reqPhone',currentProfile.phone||db.settings.phone||'');
+  set('reqAddress',db.settings.area||'');
+}
+async function submitAccountChangeRequest(e){
+  e.preventDefault();if(isSuperAdmin()||!currentProfile)return;
+  const f=new FormData(e.target),requested_data={name:String(f.get('name')||'').trim(),generatorName:String(f.get('generatorName')||'').trim(),username:normalizeUsername(f.get('username')),email:String(f.get('email')||'').trim().toLowerCase(),phone:String(f.get('phone')||'').trim(),address:String(f.get('address')||'').trim()};
+  if(!requested_data.name||!requested_data.generatorName||!requested_data.username)return alert('أدخل الاسم واسم المولدة واسم المستخدم.');
+  if(/\s/.test(requested_data.username))return alert('اسم المستخدم بدون فراغات.');
+  const btn=e.target.querySelector('button');btn.disabled=true;btn.textContent='جاري إرسال الطلب...';
+  try{const {error}=await sb.from('generator_account_change_requests').insert({user_id:currentProfile.user_id,workspace_id:currentWorkspaceId,request_type:'profile_update',requested_data});if(error)throw error;alert('تم إرسال طلب التعديل إلى الأدمن الرئيسي.');await renderMyAccountRequests()}catch(err){alert(err.code==='23505'?'عندك طلب تعديل معلّق مسبقاً. انتظر قرار الأدمن الرئيسي.':(err.message||'تعذر إرسال الطلب.'))}finally{btn.disabled=false;btn.textContent='إرسال طلب التعديل'}
+}
+async function requestPasswordReset(){
+  if(isSuperAdmin()||!currentProfile)return;if(!confirm('إرسال طلب إعادة تعيين كلمة المرور إلى الأدمن الرئيسي؟'))return;
+  try{const {error}=await sb.from('generator_account_change_requests').insert({user_id:currentProfile.user_id,workspace_id:currentWorkspaceId,request_type:'password_reset',requested_data:{}});if(error)throw error;alert('تم إرسال طلب إعادة تعيين كلمة المرور. الأدمن الرئيسي وحده يعيّن كلمة المرور الجديدة.');await renderMyAccountRequests()}catch(err){alert(err.code==='23505'?'عندك طلب إعادة تعيين معلّق مسبقاً.':(err.message||'تعذر إرسال الطلب.'))}
+}
+async function renderMyAccountRequests(){
+  const box=document.getElementById('myAccountRequests');if(!box||isSuperAdmin()||!currentProfile)return;box.innerHTML='<div class="empty">جاري التحميل...</div>';
+  const {data,error}=await sb.from('generator_account_change_requests').select('*').eq('user_id',currentProfile.user_id).order('created_at',{ascending:false}).limit(10);
+  if(error){box.innerHTML='<div class="empty">تعذر تحميل الطلبات</div>';return}
+  const st={pending:['قيد الانتظار','partial'],approved:['تمت الموافقة','paid'],rejected:['مرفوض','due']};
+  box.innerHTML=(data||[]).length?(data||[]).map(r=>{const x=st[r.status]||[r.status,''];return `<div class="summary-row"><span>${r.request_type==='password_reset'?'إعادة تعيين كلمة المرور':'تعديل بيانات الحساب'}<small style="display:block;color:#6b7280;margin-top:3px">${new Date(r.created_at).toLocaleString('ar-IQ')}</small></span><b><span class="badge ${x[1]}">${x[0]}</span></b></div>`}).join(''):'<div class="empty">لا توجد طلبات حتى الآن</div>'
+}
+function accountRequestDetails(r){
+  if(r.request_type==='password_reset')return 'طلب إعادة تعيين كلمة المرور';const d=r.requested_data||{};return [`الاسم: ${d.name||'-'}`,`المولدة: ${d.generatorName||'-'}`,`المستخدم: ${d.username||'-'}`,`البريد: ${d.email||'-'}`,`الهاتف: ${d.phone||'-'}`,`العنوان: ${d.address||'-'}`].map(esc).join('<br>')
+}
+async function renderAccountRequests(){
+  if(!isSuperAdmin())return;const body=document.getElementById('accountRequestsBody');if(!body)return;body.innerHTML='<tr><td colspan="6" class="empty">جاري تحميل الطلبات...</td></tr>';
+  const {data,error}=await sb.from('generator_account_change_requests').select('*').order('created_at',{ascending:false}).limit(100);if(error){body.innerHTML='<tr><td colspan="6" class="empty">تعذر تحميل الطلبات</td></tr>';return}
+  const ac=new Map((window._generatorAccounts||[]).map(a=>[a.id,a]));const pending=(data||[]).filter(r=>r.status==='pending').length;const c=document.getElementById('pendingAccountRequestsCount');if(c)c.textContent=pending.toLocaleString('ar-IQ')+' معلّق';
+  const statusMap={pending:['قيد الانتظار','partial'],approved:['تمت الموافقة','paid'],rejected:['مرفوض','due']};
+  body.innerHTML=(data||[]).length?(data||[]).map(r=>{const a=ac.get(r.user_id)||{},st=statusMap[r.status]||[r.status,''];const actions=r.status==='pending'?`<div class="account-actions"><button class="btn small green" onclick="approveAccountRequest('${r.id}','${r.request_type}')">موافقة</button><button class="btn small red" onclick="rejectAccountRequest('${r.id}')">رفض</button></div>`:'-';return `<tr><td><b>${esc(a.name||a.username||r.user_id)}</b><br><small>${esc(a.generatorName||'')}</small></td><td>${r.request_type==='password_reset'?'إعادة تعيين كلمة المرور':'تعديل بيانات الحساب'}</td><td style="min-width:230px">${accountRequestDetails(r)}</td><td>${new Date(r.created_at).toLocaleString('ar-IQ')}</td><td><span class="badge ${st[1]}">${st[0]}</span></td><td>${actions}</td></tr>`}).join(''):'<tr><td colspan="6" class="empty">لا توجد طلبات</td></tr>'
+}
+async function approveAccountRequest(id,type){
+  if(!isSuperAdmin())return;if(type==='password_reset'){openModal('الموافقة على إعادة تعيين كلمة المرور',`<form onsubmit="approvePasswordRequest(event,'${id}')"><div class="form-grid"><div class="field full"><label>كلمة المرور الجديدة *</label><input name="password" type="password" minlength="6" required autocomplete="new-password"></div><div class="field full"><label>تأكيد كلمة المرور *</label><input name="password2" type="password" minlength="6" required autocomplete="new-password"></div><div class="full"><button class="btn green">تعيين كلمة المرور والموافقة</button></div></div></form>`);return}
+  if(!confirm('الموافقة على طلب تعديل بيانات الحساب وتطبيق التغييرات؟'))return;try{await callAdminFunction({action:'approve_request',requestId:id});await renderAccounts();alert('تمت الموافقة وتطبيق التعديلات.')}catch(err){alert(err.message)}
+}
+async function approvePasswordRequest(e,id){
+  e.preventDefault();const f=new FormData(e.target),password=String(f.get('password')||''),p2=String(f.get('password2')||'');if(password.length<6)return alert('كلمة المرور 6 أحرف أو أرقام على الأقل.');if(password!==p2)return alert('تأكيد كلمة المرور غير مطابق.');const btn=e.target.querySelector('button');btn.disabled=true;try{await callAdminFunction({action:'approve_request',requestId:id,password});closeModal();await renderAccounts();alert('تم تعيين كلمة المرور الجديدة والموافقة على الطلب.')}catch(err){alert(err.message)}finally{btn.disabled=false}
+}
+async function rejectAccountRequest(id){if(!isSuperAdmin())return;const note=prompt('سبب الرفض (اختياري):','')??null;if(note===null)return;try{await callAdminFunction({action:'reject_request',requestId:id,note});await renderAccounts()}catch(err){alert(err.message)}}
+
 async function initAuth(){
   document.querySelector('.app').classList.add('auth-locked');switchAuthMode();
   const {data:{session}}=await sb.auth.getSession();if(session){try{await enterFromSession();return}catch(e){console.error(e);await sb.auth.signOut()}}
