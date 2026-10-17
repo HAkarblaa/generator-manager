@@ -395,6 +395,20 @@ function clearAuthError(){const el=document.getElementById('authError');el.textC
 function switchAuthMode(){clearAuthError();document.getElementById('registerForm').style.display='none';document.getElementById('loginForm').style.display='grid';document.getElementById('authTitle').textContent='تسجيل الدخول';document.getElementById('authSub').textContent='أدخل اسم المستخدم أو البريد الإلكتروني أو رقم الهاتف، ثم كلمة المرور.';document.getElementById('authSwitch').innerHTML=''}
 function showCloudState(msg,type='ok'){let el=document.getElementById('cloudState');if(!el){el=document.createElement('div');el.id='cloudState';el.style.cssText='position:fixed;left:14px;bottom:76px;z-index:1000;padding:9px 12px;border-radius:10px;font-size:12px;box-shadow:0 4px 16px #0002;transition:.2s';document.body.appendChild(el)}el.textContent=msg;el.style.background=type==='bad'?'#fee2e2':'#dcfce7';el.style.color=type==='bad'?'#991b1b':'#166534';el.style.display='block';clearTimeout(el._t);el._t=setTimeout(()=>el.style.display='none',2400)}
 
+async function invokeEdge(name,body){
+  const {data,error}=await sb.functions.invoke(name,{body});
+  if(error){
+    let msg='تعذر الاتصال بالخادم.';
+    try{
+      if(error.context && typeof error.context.json==='function'){
+        const j=await error.context.json();
+        if(j&&j.error)msg=j.error;
+      }else if(error.message)msg=error.message;
+    }catch(_){ if(error.message)msg=error.message }
+    throw new Error(msg);
+  }
+  return data||{};
+}
 async function loginUser(e){
   e.preventDefault();clearAuthError();
   const btn=e.target.querySelector('button[type="submit"]'),identifier=String(document.getElementById('loginIdentifier').value||'').trim(),password=document.getElementById('loginPassword').value;
@@ -402,16 +416,15 @@ async function loginUser(e){
   btn.disabled=true;btn.textContent='جاري الدخول...';
   try{
     const device=currentDevicePayload();
-    const r=await fetch(FN_BASE+'/generator-login',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify({identifier,password,...device})});
-    const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'بيانات الدخول غير صحيحة.');
+    const j=await invokeEdge('generator-login',{identifier,password,...device});
+    if(!j.access_token||!j.refresh_token)throw new Error(j.error||'بيانات الدخول غير صحيحة.');
     const {error}=await sb.auth.setSession({access_token:j.access_token,refresh_token:j.refresh_token});if(error)throw error;
     await enterFromSession();
-  }catch(err){showAuthError(err.message||'تعذر تسجيل الدخول.')}finally{btn.disabled=false;btn.textContent='دخول'}
+  }catch(err){showAuthError(err.message||'تعذر تسجيل الدخول حالياً.')}finally{btn.disabled=false;btn.textContent='دخول'}
 }
 async function verifyCurrentDevice(){
   const {data:{session}}=await sb.auth.getSession();if(!session)throw new Error('انتهت الجلسة. سجل الدخول من جديد.');
-  const r=await fetch(FN_BASE+'/generator-device-check',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify(currentDevicePayload())});
-  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'هذا الجهاز غير معتمد للحساب.');return j
+  return await invokeEdge('generator-device-check',currentDevicePayload());
 }
 function registerOwner(e){e.preventDefault();showAuthError('إنشاء الحسابات متاح للأدمن الرئيسي فقط من داخل لوحة الإدارة.')}
 async function loadCurrentProfile(){
@@ -480,8 +493,7 @@ async function syncRemoteDB(){
 
 async function callAdminFunction(payload){
   const {data:{session}}=await sb.auth.getSession();if(!session)throw new Error('انتهت الجلسة. سجل الدخول من جديد.');
-  const r=await fetch(FN_BASE+'/generator-admin-users',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify(payload)});
-  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'تعذر تنفيذ العملية.');return j
+  return await invokeEdge('generator-admin-users',payload);
 }
 
 // إدارة الحسابات — للأدمن الرئيسي فقط
