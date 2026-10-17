@@ -12,13 +12,56 @@
 @media(max-width:950px){.layout{grid-template-columns:1fr}.side{display:none}.main{padding:12px}.stats{grid-template-columns:repeat(2,1fr)}.two,.three{grid-template-columns:1fr}.quick{grid-template-columns:repeat(2,1fr)}.mobile-nav{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;bottom:0;right:0;left:0;background:#fff;border-top:1px solid var(--line);z-index:30;padding:6px calc(6px + env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) calc(6px + env(safe-area-inset-left));box-shadow:0 -8px 24px rgba(0,0,0,.07)}.mobile-nav button{border:0;background:transparent;padding:8px 3px;font-size:11px;color:#4b5563}.mobile-nav button.active{color:#111827;font-weight:700}.main{padding-bottom:86px}.top .actions .hide-mobile{display:none}}
 @media(max-width:600px){.stats{grid-template-columns:1fr 1fr}.stat .v{font-size:21px}.form-grid{grid-template-columns:1fr}.quick{grid-template-columns:1fr 1fr}.section-title{align-items:flex-start}.section-title h2{font-size:19px}.brand small{display:none}}
 @media print{.top,.side,.mobile-nav,.no-print,.toolbar,.section-title .btn{display:none!important}.layout{display:block}.main{padding:0}.card{box-shadow:none;border:0}.view{display:block!important}body{background:#fff}}
+
+/* ===== تسجيل الدخول والحساب ===== */
+.app.auth-locked{display:none}
+.auth-screen{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;padding:20px;background:linear-gradient(145deg,#0f172a 0%,#111827 45%,#1e3a8a 100%);overflow:auto}
+.auth-screen.show{display:flex}
+.auth-card{width:min(440px,100%);background:#fff;border-radius:24px;padding:24px;box-shadow:0 30px 100px rgba(0,0,0,.35)}
+.auth-logo{width:68px;height:68px;border-radius:20px;background:#111827;color:#fff;display:grid;place-items:center;font-size:34px;margin:0 auto 12px}
+.auth-title{text-align:center;margin:0;font-size:25px}.auth-sub{text-align:center;color:#6b7280;font-size:13px;line-height:1.8;margin:7px 0 18px}
+.auth-form{display:grid;gap:12px}.auth-field{display:grid;gap:6px}.auth-field label{font-size:13px;color:#4b5563}.auth-field input{width:100%;padding:13px 14px;border:1px solid #d1d5db;border-radius:12px;outline:none;background:#fff}.auth-field input:focus{border-color:#111827;box-shadow:0 0 0 3px rgba(17,24,39,.08)}
+.auth-btn{border:0;border-radius:12px;padding:13px 16px;background:#111827;color:#fff;font-weight:700;cursor:pointer}.auth-btn:active{transform:translateY(1px)}
+.auth-switch{margin-top:14px;text-align:center;font-size:13px;color:#6b7280}.auth-switch button{border:0;background:transparent;color:#1d4ed8;font-weight:700;cursor:pointer}
+.auth-error{display:none;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;padding:10px 12px;border-radius:11px;font-size:13px}.auth-error.show{display:block}
+.auth-info{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;padding:10px 12px;border-radius:11px;font-size:13px;line-height:1.7}
+.user-chip{display:flex;align-items:center;gap:8px;border:1px solid #374151;background:#1f2937;color:#fff;border-radius:12px;padding:7px 10px;max-width:180px}.user-chip .avatar{width:28px;height:28px;border-radius:9px;background:#fff;color:#111827;display:grid;place-items:center;font-weight:700}.user-chip .who{min-width:0}.user-chip .who b{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.user-chip .who small{display:block;font-size:10px;color:#cbd5e1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.logout-btn{border:1px solid #7f1d1d;background:#991b1b;color:#fff;border-radius:12px;padding:9px 11px;cursor:pointer}
+@media(max-width:700px){.auth-card{padding:20px;border-radius:20px}.auth-title{font-size:22px}.user-chip{display:none}.logout-btn{padding:9px 10px}.top{padding:11px 12px}.top .actions{gap:6px}}
 </style>
 </head>
 <body>
+
+<div class="auth-screen" id="authScreen">
+  <div class="auth-card">
+    <div class="auth-logo">⚡</div>
+    <h1 class="auth-title" id="authTitle">تسجيل الدخول</h1>
+    <div class="auth-sub" id="authSub">سجّل الدخول للوصول إلى موقع إدارة المولدة.</div>
+    <div class="auth-error" id="authError"></div>
+
+    <form class="auth-form" id="loginForm" onsubmit="loginUser(event)">
+      <div class="auth-field"><label>اسم المستخدم</label><input id="loginUsername" autocomplete="username" required placeholder="مثال: owner"></div>
+      <div class="auth-field"><label>كلمة المرور</label><input id="loginPassword" type="password" autocomplete="current-password" required placeholder="••••••••"></div>
+      <button class="auth-btn" type="submit">دخول</button>
+    </form>
+
+    <form class="auth-form" id="registerForm" onsubmit="registerOwner(event)" style="display:none">
+      <div class="auth-info">هذا الحساب سيكون حساب مالك المولدة على هذا المتصفح.</div>
+      <div class="auth-field"><label>اسم المالك</label><input id="regName" required placeholder="الاسم الكامل"></div>
+      <div class="auth-field"><label>اسم المستخدم</label><input id="regUsername" required autocomplete="username" placeholder="بدون فراغات"></div>
+      <div class="auth-field"><label>رقم الهاتف</label><input id="regPhone" inputmode="tel" placeholder="07xxxxxxxxx"></div>
+      <div class="auth-field"><label>كلمة المرور</label><input id="regPassword" type="password" autocomplete="new-password" required minlength="4" placeholder="4 أحرف أو أرقام على الأقل"></div>
+      <div class="auth-field"><label>تأكيد كلمة المرور</label><input id="regPassword2" type="password" autocomplete="new-password" required minlength="4" placeholder="أعد كتابة كلمة المرور"></div>
+      <button class="auth-btn" type="submit">إنشاء الحساب والدخول</button>
+    </form>
+
+    <div class="auth-switch" id="authSwitch"></div>
+  </div>
+</div>
+
 <div class="app">
 <header class="top">
   <div class="brand"><div class="logo">⚡</div><div><h1 id="appTitle">إدارة المولدة</h1><small>نسخة تجريبية — البيانات والأسماء وهمية</small></div></div>
-  <div class="actions"><button class="iconbtn hide-mobile" onclick="exportData()">نسخة احتياطية</button><button class="iconbtn" onclick="openSettings()">⚙</button></div>
+  <div class="actions"><div class="user-chip" id="currentUserChip"></div><button class="iconbtn hide-mobile" onclick="exportData()">نسخة احتياطية</button><button class="iconbtn" onclick="openSettings()">⚙</button><button class="logout-btn" onclick="logoutUser()" title="تسجيل الخروج">خروج</button></div>
 </header>
 <div class="layout">
 <aside class="side"><div class="nav" id="sideNav"></div></aside>
@@ -240,8 +283,89 @@ function resetAll(){if(confirm('سيتم حذف جميع البيانات نها
 function exportSubscribersCSV(){let m=monthNow();let rows=[['الاسم','الأمبيرات','رقم الجوزة','الهاتف','المنطقة','العنوان','الحساب','المدفوع','المتبقي','الحالة'],...db.subscribers.map(s=>{let due=monthlyDue(s),paid=paidFor(s.id,m),remain=Math.max(0,due-paid),st=statusFor(s,m);return[s.name,s.amps,s.fuseNo||'',s.phone,s.area,s.address,due,paid,remain,st==='paid'?'دافع':st==='partial'?'دافع جزء':'غير دافع']})];let csv='\ufeff'+rows.map(r=>r.map(v=>`"${String(v??'').replaceAll('"','""')}"`).join(',')).join('\n');let blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='subscribers.csv';a.click();URL.revokeObjectURL(a.href)}
 function printReceipt(id){let c=db.collections.find(x=>x.id===id),s=db.subscribers.find(x=>x.id===c.subId);if(!c||!s)return;let w=window.open('','_blank','width=500,height=700');let due=monthlyDue(s),remain=Math.max(0,due-paidFor(s.id,c.month));w.document.write(`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>وصل قبض</title><style>body{font-family:Tahoma;padding:30px;color:#111}.r{display:flex;justify-content:space-between;border-bottom:1px dashed #bbb;padding:10px 0}h2{text-align:center}.box{border:2px solid #111;border-radius:16px;padding:20px}.small{color:#666;font-size:13px;text-align:center;margin-top:18px}</style></head><body><div class="box"><h2>${esc(db.settings.name)}</h2><div class="r"><span>وصل قبض</span><b>${c.date}</b></div><div class="r"><span>المشترك</span><b>${esc(s.name)}</b></div><div class="r"><span>الشهر</span><b>${c.month}</b></div><div class="r"><span>عدد الأمبيرات</span><b>${s.amps}</b></div><div class="r"><span>رقم الجوزة</span><b>${esc(s.fuseNo||'-')}</b></div><div class="r"><span>العنوان</span><b>${esc([s.area,s.address].filter(Boolean).join(' - ')||'-')}</b></div><div class="r"><span>المطلوب</span><b>${fmt(due)}</b></div><div class="r"><span>المبلغ المستلم</span><b>${fmt(c.amount)}</b></div><div class="r"><span>المتبقي</span><b>${fmt(remain)}</b></div><div class="r"><span>طريقة الدفع</span><b>${esc(c.method)}</b></div><div class="small">${esc(db.settings.owner||'')} ${db.settings.phone?'— '+esc(db.settings.phone):''}</div></div><script>window.onload=()=>window.print()<\/script></body></html>`);w.document.close()}
 function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}function attr(s=''){return esc(s)}
-initNav();colMonthFilter.value=monthNow();reportMonth.value=monthNow();renderAll();showView('dashboard');setTimeout(()=>showUnpaidAlert(false),450);
-if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+// ===== نظام الحساب المحلي =====
+const ACCOUNTS_KEY='generatorManagerAccounts_v1';
+const SESSION_KEY='generatorManagerSession_v1';
+let appBooted=false;
+function getAccounts(){try{return JSON.parse(localStorage.getItem(ACCOUNTS_KEY)||'[]')}catch(e){return[]}}
+function setAccounts(v){localStorage.setItem(ACCOUNTS_KEY,JSON.stringify(v))}
+function normalizeUsername(v){return String(v||'').trim().toLowerCase()}
+function simpleHash(str){
+  // بصمة محلية لكلمة المرور حتى لا تحفظ كنص صريح داخل التخزين المحلي.
+  let h1=0xdeadbeef^str.length,h2=0x41c6ce57^str.length;
+  for(let i=0,ch;i<str.length;i++){ch=str.charCodeAt(i);h1=Math.imul(h1^ch,2654435761);h2=Math.imul(h2^ch,1597334677)}
+  h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);
+  h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);
+  return (4294967296*(2097151&h2)+(h1>>>0)).toString(36)
+}
+function passwordHash(username,password){return simpleHash('GM|'+normalizeUsername(username)+'|'+String(password))}
+function currentAccount(){
+  const sid=localStorage.getItem(SESSION_KEY); if(!sid)return null;
+  return getAccounts().find(a=>a.id===sid)||null
+}
+function showAuthError(msg){const el=document.getElementById('authError');el.textContent=msg;el.classList.add('show')}
+function clearAuthError(){const el=document.getElementById('authError');el.textContent='';el.classList.remove('show')}
+function switchAuthMode(mode){
+  clearAuthError();
+  const hasAccounts=getAccounts().length>0;
+  const login=document.getElementById('loginForm'), reg=document.getElementById('registerForm');
+  const title=document.getElementById('authTitle'), sub=document.getElementById('authSub'), sw=document.getElementById('authSwitch');
+  if(mode==='register'){
+    login.style.display='none';reg.style.display='grid';title.textContent=hasAccounts?'إنشاء حساب إضافي':'إنشاء حساب المالك';sub.textContent=hasAccounts?'أنشئ حساباً محلياً جديداً على هذا المتصفح.':'أول مرة تستخدم الموقع؟ أنشئ حساب المالك ثم ادخل للبرنامج.';
+    sw.innerHTML=hasAccounts?'عندك حساب؟ <button type="button" onclick="switchAuthMode(\'login\')">تسجيل الدخول</button>':'';
+  }else{
+    reg.style.display='none';login.style.display='grid';title.textContent='تسجيل الدخول';sub.textContent='سجّل الدخول للوصول إلى موقع إدارة المولدة.';
+    sw.innerHTML='تريد حساب جديد؟ <button type="button" onclick="switchAuthMode(\'register\')">إنشاء حساب</button>';
+  }
+}
+function registerOwner(e){
+  e.preventDefault();clearAuthError();
+  const name=document.getElementById('regName').value.trim();
+  const username=normalizeUsername(document.getElementById('regUsername').value);
+  const phone=document.getElementById('regPhone').value.trim();
+  const p1=document.getElementById('regPassword').value, p2=document.getElementById('regPassword2').value;
+  if(!name||!username)return showAuthError('أدخل الاسم واسم المستخدم.');
+  if(/\s/.test(username))return showAuthError('اسم المستخدم يجب أن يكون بدون فراغات.');
+  if(p1.length<4)return showAuthError('كلمة المرور يجب أن تكون 4 أحرف أو أرقام على الأقل.');
+  if(p1!==p2)return showAuthError('تأكيد كلمة المرور غير مطابق.');
+  const accounts=getAccounts();if(accounts.some(a=>a.username===username))return showAuthError('اسم المستخدم موجود مسبقاً.');
+  const account={id:'acc_'+uid(),name,username,phone,role:'owner',passwordHash:passwordHash(username,p1),createdAt:Date.now()};
+  accounts.push(account);setAccounts(accounts);localStorage.setItem(SESSION_KEY,account.id);
+  if(db&&db.settings){if(!db.settings.owner)db.settings.owner=name;if(!db.settings.phone&&phone)db.settings.phone=phone;save()}
+  enterApp(account)
+}
+function loginUser(e){
+  e.preventDefault();clearAuthError();
+  const username=normalizeUsername(document.getElementById('loginUsername').value), password=document.getElementById('loginPassword').value;
+  const a=getAccounts().find(x=>x.username===username);
+  if(!a||a.passwordHash!==passwordHash(username,password))return showAuthError('اسم المستخدم أو كلمة المرور غير صحيحة.');
+  localStorage.setItem(SESSION_KEY,a.id);enterApp(a)
+}
+function enterApp(account){
+  document.getElementById('authScreen').classList.remove('show');
+  document.querySelector('.app').classList.remove('auth-locked');
+  const chip=document.getElementById('currentUserChip');
+  if(chip){chip.innerHTML='<span class="avatar">'+esc((account.name||account.username).slice(0,1))+'</span><span class="who"><b>'+esc(account.name||account.username)+'</b><small>@'+esc(account.username)+'</small></span>'}
+  bootApp()
+}
+function logoutUser(){
+  if(!confirm('تسجيل الخروج من الحساب؟'))return;
+  localStorage.removeItem(SESSION_KEY);location.reload()
+}
+function initAuth(){
+  const accounts=getAccounts(), account=currentAccount();
+  document.querySelector('.app').classList.add('auth-locked');
+  if(account){enterApp(account);return}
+  document.getElementById('authScreen').classList.add('show');
+  switchAuthMode(accounts.length?'login':'register')
+}
+function bootApp(){
+  if(appBooted)return;appBooted=true;
+  initNav();colMonthFilter.value=monthNow();reportMonth.value=monthNow();renderAll();showView('dashboard');setTimeout(()=>showUnpaidAlert(false),450);
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+
+initAuth();
 </script>
 </body>
 </html>
