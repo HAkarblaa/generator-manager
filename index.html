@@ -424,7 +424,15 @@ async function loadCurrentProfile(){
 async function enterFromSession(){
   await verifyCurrentDevice();
   const a=await loadCurrentProfile();if(!a){await sb.auth.signOut();throw new Error('الحساب غير مربوط بنظام المولدات.');}
-  if(currentWorkspaceId)await loadRemoteDB();else db=blankDB();
+  if(currentWorkspaceId){
+    await loadRemoteDB();
+  }else if(a.role==='superadmin'){
+    // البيانات الافتراضية تظهر للأدمن الرئيسي فقط.
+    // حسابات أصحاب المولدات الجديدة تبدأ فارغة تماماً.
+    db=defaultDB();
+  }else{
+    db=blankDB();
+  }
   document.getElementById('authScreen').classList.remove('show');document.querySelector('.app').classList.remove('auth-locked');
   const chip=document.getElementById('currentUserChip'),role=a.role==='superadmin'?'أدمن رئيسي':'صاحب مولدة';
   if(chip)chip.innerHTML='<span class="avatar">'+esc((a.name||a.username).slice(0,1))+'</span><span class="who"><b>'+esc(a.name||a.username)+'</b><small>'+role+' • @'+esc(a.username)+'</small></span>';
