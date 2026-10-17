@@ -302,7 +302,29 @@ function defaultDB(){
 function blankDB(){return {settings:{name:'إدارة المولدة',owner:'',phone:'',area:'',ampPrice:18000,fuelPrice:0,oilPrice:0,workerCost:0,operatingCost:0,currency:'د.ع'},subscribers:[],collections:[],expenses:[],fuel:[],maintenance:[]}}
 function loadDB(){return blankDB()}
 let syncTimer=null,syncBusy=false,syncQueued=false;
-function save(){renderAll();if(currentWorkspaceId){clearTimeout(syncTimer);syncTimer=setTimeout(()=>syncRemoteDB().catch(e=>{console.error(e);showCloudState('تعذر حفظ آخر تعديل','bad')}),250)}}
+const OFFLINE_DB_PREFIX='generator_offline_db_v1:';
+const OFFLINE_PROFILE_PREFIX='generator_offline_profile_v1:';
+const OFFLINE_DIRTY_PREFIX='generator_offline_dirty_v1:';
+const OFFLINE_DEVICE_PREFIX='generator_offline_device_ok_v1:';
+function offlineDbKey(wid){return OFFLINE_DB_PREFIX+String(wid||'none')}
+function cacheLocalDB(wid,data=db){if(!wid)return;try{localStorage.setItem(offlineDbKey(wid),JSON.stringify({savedAt:Date.now(),data}))}catch(e){console.warn('offline cache',e)}}
+function readLocalDB(wid){if(!wid)return null;try{const x=JSON.parse(localStorage.getItem(offlineDbKey(wid))||'null');return x&&x.data?x.data:null}catch(e){return null}}
+function markOfflineDirty(wid,yes=true){if(!wid)return;try{if(yes)localStorage.setItem(OFFLINE_DIRTY_PREFIX+wid,String(Date.now()));else localStorage.removeItem(OFFLINE_DIRTY_PREFIX+wid)}catch(e){}}
+function isOfflineDirty(wid){try{return !!localStorage.getItem(OFFLINE_DIRTY_PREFIX+wid)}catch(e){return false}}
+function cacheProfileLocal(p){if(!p?.user_id)return;try{localStorage.setItem(OFFLINE_PROFILE_PREFIX+p.user_id,JSON.stringify(p))}catch(e){}}
+function readProfileLocal(uid){try{return JSON.parse(localStorage.getItem(OFFLINE_PROFILE_PREFIX+uid)||'null')}catch(e){return null}}
+function cacheDeviceApproved(uid,ok=true){if(!uid)return;try{localStorage.setItem(OFFLINE_DEVICE_PREFIX+uid+':'+getDeviceId(),ok?'1':'0')}catch(e){}}
+function isDeviceApprovedLocal(uid){try{return localStorage.getItem(OFFLINE_DEVICE_PREFIX+uid+':'+getDeviceId())==='1'}catch(e){return false}}
+function save(){
+  renderAll();
+  if(currentWorkspaceId){
+    cacheLocalDB(currentWorkspaceId,db);
+    markOfflineDirty(currentWorkspaceId,true);
+    if(!navigator.onLine){showCloudState('محفوظ على الجهاز — بانتظار المزامنة');return}
+    clearTimeout(syncTimer);
+    syncTimer=setTimeout(()=>syncRemoteDB().catch(e=>{console.error(e);showCloudState('محفوظ محلياً — ستتم المزامنة عند رجوع الإنترنت','bad')}),400)
+  }
+}
 const navItems=[['dashboard','الرئيسية','⌂'],['subscribers','المشتركين','👥'],['collections','الجباية','💵'],['debts','الديون','⚠'],['expenses','المصاريف','🧾'],['fuel','الوقود','⛽'],['maintenance','الصيانة','🔧'],['reports','التقارير','📊'],['settings','الإعدادات','⚙']];
 function isSuperAdmin(){return currentAccount()?.role==='superadmin'}
 function initNav(){
@@ -423,21 +445,35 @@ async function loginUser(e){
   }catch(err){showAuthError(err.message||'تعذر تسجيل الدخول حالياً.')}finally{btn.disabled=false;btn.textContent='دخول'}
 }
 async function verifyCurrentDevice(){
-  const {data:{session}}=await sb.auth.getSession();
-  if(!session||!session.user)throw new Error('انتهت الجلسة. سجل الدخول من جديد.');
-  return await invokeEdge('generator-device-check',{user_id:session.user.id,...currentDevicePayload()});
+  const {data:{session}}=await sb.auth.getSession();if(!session)throw new Error('انتهت الجلسة. سجل الدخول من جديد.');
+  const uid=session.user?.id;
+  if(!navigator.onLine){
+    if(isDeviceApprovedLocal(uid))return {allowed:true,offline:true};
+    throw new Error('أول دخول من هذا الجهاز يحتاج إنترنت حتى يتم التحقق منه.');
+  }
+  const r=await invokeEdge('generator-device-check',{...currentDevicePayload(),user_id:uid});
+  if(r?.allowed!==false)cacheDeviceApproved(uid,true);
+  return r;
 }
 function registerOwner(e){e.preventDefault();showAuthError('إنشاء الحسابات متاح للأدمن الرئيسي فقط من داخل لوحة الإدارة.')}
 async function loadCurrentProfile(){
-  const {data:{user},error:ue}=await sb.auth.getUser();if(ue||!user)return null;
-  const {data:p,error}=await sb.from('generator_profiles').select('*').eq('user_id',user.id).maybeSingle();if(error)throw error;if(!p||p.active===false)throw new Error('الحساب غير فعال.');
+  const {data:{session}}=await sb.auth.getSession();
+  const uid=session?.user?.id;if(!uid)return null;
+  let p=null;
+  if(navigator.onLine){
+    try{
+      const {data,error}=await sb.from('generator_profiles').select('*').eq('user_id',uid).maybeSingle();
+      if(error)throw error;p=data;if(p)cacheProfileLocal(p);
+    }catch(e){console.warn('profile online failed',e);p=readProfileLocal(uid)}
+  }else p=readProfileLocal(uid);
+  if(!p)return null;if(p.active===false)throw new Error('الحساب غير فعال.');
   currentProfile=p;currentWorkspaceId=p.workspace_id||null;
   currentAccountState={id:p.user_id,name:p.display_name||p.username,username:p.username,role:p.role==='super_admin'?'superadmin':'owner',enabled:p.active!==false,workspaceId:p.workspace_id||null};
   return currentAccountState
 }
 async function enterFromSession(){
+  const a=await loadCurrentProfile();if(!a){if(navigator.onLine)await sb.auth.signOut();throw new Error(navigator.onLine?'الحساب غير مربوط بنظام المولدات.':'لا توجد بيانات محفوظة لهذا الحساب على هذا الجهاز. افتح البرنامج مرة واحدة مع الإنترنت أولاً.');}
   await verifyCurrentDevice();
-  const a=await loadCurrentProfile();if(!a){await sb.auth.signOut();throw new Error('الحساب غير مربوط بنظام المولدات.');}
   if(currentWorkspaceId){
     await loadRemoteDB();
   }else if(a.role==='superadmin'){
@@ -456,28 +492,42 @@ async function logoutUser(){if(!confirm('تسجيل الخروج من الحسا
 
 async function loadRemoteDB(){
   if(!currentWorkspaceId){db=blankDB();return}
+  const cached=readLocalDB(currentWorkspaceId);
+  if(!navigator.onLine){
+    if(cached){db=cached;showCloudState('وضع أوفلاين — آخر بيانات محفوظة');return}
+    throw new Error('لا توجد نسخة أوفلاين محفوظة. اتصل بالإنترنت مرة واحدة لتحميل بيانات المولدة.');
+  }
   showCloudState('جاري تحميل البيانات...');
-  const [wr,sr,pr,er,fr,mr]=await Promise.all([
-    sb.from('generator_workspaces').select('*').eq('id',currentWorkspaceId).single(),
-    sb.from('generator_subscribers').select('*').eq('workspace_id',currentWorkspaceId).order('created_at'),
-    sb.from('generator_payments').select('*').eq('workspace_id',currentWorkspaceId).order('payment_date'),
-    sb.from('generator_expenses').select('*').eq('workspace_id',currentWorkspaceId).order('expense_date'),
-    sb.from('generator_fuel').select('*').eq('workspace_id',currentWorkspaceId).order('fuel_date'),
-    sb.from('generator_maintenance').select('*').eq('workspace_id',currentWorkspaceId).order('maintenance_date')
-  ]);
-  for(const r of [wr,sr,pr,er,fr,mr])if(r.error)throw r.error;
-  const w=wr.data||{};
-  db={settings:{name:w.generator_name||'إدارة المولدة',owner:w.owner_name||'',phone:w.phone||'',area:w.address||'',ampPrice:Number(w.amp_price||0),fuelPrice:Number(w.fuel_liter_price||0),oilPrice:Number(w.oil_price||0),workerCost:Number(w.worker_cost||0),operatingCost:Number(w.operating_cost||0),currency:'د.ع'},
-    subscribers:(sr.data||[]).map(x=>({id:x.id,name:x.full_name||'',phone:x.phone||'',area:x.area||'',address:x.address||'',amps:Number(x.amps||0),fuseNo:x.jawza_number||'',notes:x.notes||'',createdAt:new Date(x.created_at||Date.now()).getTime()})),
-    collections:(pr.data||[]).map(x=>({id:x.id,subId:x.subscriber_id,month:(x.bill_month||String(x.payment_date||'').slice(0,7)).slice(0,7),amount:Number(x.amount||0),date:String(x.payment_date||'').slice(0,10),method:x.method||'نقدي',notes:x.notes||'',createdAt:new Date(x.created_at||x.payment_date||Date.now()).getTime()})),
-    expenses:(er.data||[]).map(x=>({id:x.id,type:x.category||'أخرى',title:x.title||x.description||'',qty:Number(x.qty||1),unitPrice:Number(x.unit_price||0),amount:Number(x.amount||0),date:x.expense_date,notes:x.notes||x.description||''})),
-    fuel:(fr.data||[]).map(x=>({id:x.id,liters:Number(x.liters||0),price:Number(x.price_per_liter||0),total:Number(x.total_cost||0),date:x.fuel_date,notes:x.notes||x.supplier||''})),
-    maintenance:(mr.data||[]).map(x=>({id:x.id,title:x.maintenance_type||x.description||'',cost:Number(x.cost||0),tech:x.technician||'',date:x.maintenance_date,notes:x.description||''}))};
-  showCloudState('تم تحميل البيانات')
+  try{
+    // إذا توجد تعديلات أوفلاين غير مرفوعة، لا نستبدلها ببيانات السحابة.
+    if(cached&&isOfflineDirty(currentWorkspaceId)){db=cached;await syncRemoteDB();return}
+    const [wr,sr,pr,er,fr,mr]=await Promise.all([
+      sb.from('generator_workspaces').select('*').eq('id',currentWorkspaceId).single(),
+      sb.from('generator_subscribers').select('*').eq('workspace_id',currentWorkspaceId).order('created_at'),
+      sb.from('generator_payments').select('*').eq('workspace_id',currentWorkspaceId).order('payment_date'),
+      sb.from('generator_expenses').select('*').eq('workspace_id',currentWorkspaceId).order('expense_date'),
+      sb.from('generator_fuel').select('*').eq('workspace_id',currentWorkspaceId).order('fuel_date'),
+      sb.from('generator_maintenance').select('*').eq('workspace_id',currentWorkspaceId).order('maintenance_date')
+    ]);
+    for(const r of [wr,sr,pr,er,fr,mr])if(r.error)throw r.error;
+    const w=wr.data||{};
+    db={settings:{name:w.generator_name||'إدارة المولدة',owner:w.owner_name||'',phone:w.phone||'',area:w.address||'',ampPrice:Number(w.amp_price||0),fuelPrice:Number(w.fuel_liter_price||0),oilPrice:Number(w.oil_price||0),workerCost:Number(w.worker_cost||0),operatingCost:Number(w.operating_cost||0),currency:'د.ع'},
+      subscribers:(sr.data||[]).map(x=>({id:x.id,name:x.full_name||'',phone:x.phone||'',area:x.area||'',address:x.address||'',amps:Number(x.amps||0),fuseNo:x.jawza_number||'',notes:x.notes||'',createdAt:new Date(x.created_at||Date.now()).getTime()})),
+      collections:(pr.data||[]).map(x=>({id:x.id,subId:x.subscriber_id,month:(x.bill_month||String(x.payment_date||'').slice(0,7)).slice(0,7),amount:Number(x.amount||0),date:String(x.payment_date||'').slice(0,10),method:x.method||'نقدي',notes:x.notes||'',createdAt:new Date(x.created_at||x.payment_date||Date.now()).getTime()})),
+      expenses:(er.data||[]).map(x=>({id:x.id,type:x.category||'أخرى',title:x.title||x.description||'',qty:Number(x.qty||1),unitPrice:Number(x.unit_price||0),amount:Number(x.amount||0),date:x.expense_date,notes:x.notes||x.description||''})),
+      fuel:(fr.data||[]).map(x=>({id:x.id,liters:Number(x.liters||0),price:Number(x.price_per_liter||0),total:Number(x.total_cost||0),date:x.fuel_date,notes:x.notes||x.supplier||''})),
+      maintenance:(mr.data||[]).map(x=>({id:x.id,title:x.maintenance_type||x.description||'',cost:Number(x.cost||0),tech:x.technician||'',date:x.maintenance_date,notes:x.description||''}))};
+    cacheLocalDB(currentWorkspaceId,db);markOfflineDirty(currentWorkspaceId,false);showCloudState('تم تحميل البيانات')
+  }catch(e){
+    if(cached){db=cached;showCloudState('تعذر الاتصال — تم فتح النسخة المحفوظة','bad');return}
+    throw e
+  }
 }
 
 async function syncRemoteDB(){
-  if(!currentWorkspaceId)return;if(syncBusy){syncQueued=true;return}syncBusy=true;syncQueued=false;
+  if(!currentWorkspaceId)return;cacheLocalDB(currentWorkspaceId,db);
+  if(!navigator.onLine){markOfflineDirty(currentWorkspaceId,true);showCloudState('محفوظ على الجهاز — بانتظار المزامنة');return}
+  if(syncBusy){syncQueued=true;return}syncBusy=true;syncQueued=false;
   const snap=JSON.parse(JSON.stringify(db));
   try{
     let r=await sb.from('generator_workspaces').update({generator_name:snap.settings.name||'إدارة المولدة',owner_name:snap.settings.owner||'',phone:snap.settings.phone||'',address:snap.settings.area||'',amp_price:Number(snap.settings.ampPrice||0),fuel_liter_price:Number(snap.settings.fuelPrice||0),oil_price:Number(snap.settings.oilPrice||0),worker_cost:Number(snap.settings.workerCost||0),operating_cost:Number(snap.settings.operatingCost||0)}).eq('id',currentWorkspaceId);if(r.error)throw r.error;
@@ -488,7 +538,8 @@ async function syncRemoteDB(){
     if(snap.expenses.length){const rows=snap.expenses.map(x=>({id:x.id,workspace_id:currentWorkspaceId,expense_date:x.date||today(),category:x.type||'أخرى',title:x.title||'',qty:Number(x.qty||1),unit_price:Number(x.unitPrice||0),amount:Number(x.amount||0),description:x.notes||null,notes:x.notes||null}));let q=await sb.from('generator_expenses').insert(rows);if(q.error)throw q.error}
     if(snap.fuel.length){const rows=snap.fuel.map(x=>({id:x.id,workspace_id:currentWorkspaceId,fuel_date:x.date||today(),liters:Number(x.liters||0),price_per_liter:Number(x.price||0),supplier:null,notes:x.notes||null}));let q=await sb.from('generator_fuel').insert(rows);if(q.error)throw q.error}
     if(snap.maintenance.length){const rows=snap.maintenance.map(x=>({id:x.id,workspace_id:currentWorkspaceId,maintenance_date:x.date||today(),maintenance_type:x.title||'',description:x.notes||null,cost:Number(x.cost||0),technician:x.tech||null}));let q=await sb.from('generator_maintenance').insert(rows);if(q.error)throw q.error}
-    showCloudState('تم الحفظ في السحابة')
+    cacheLocalDB(currentWorkspaceId,snap);markOfflineDirty(currentWorkspaceId,false);showCloudState('تمت المزامنة مع السحابة')
+  }catch(e){markOfflineDirty(currentWorkspaceId,true);throw e
   }finally{syncBusy=false;if(syncQueued)setTimeout(()=>syncRemoteDB(),100)}
 }
 
@@ -597,15 +648,24 @@ async function approveDeviceRequest(id){if(!isSuperAdmin())return;if(!confirm('�
 async function rejectDeviceRequest(id){if(!isSuperAdmin())return;const note=prompt('سبب الرفض (اختياري):','');if(note===null)return;try{await callAdminFunction({action:'reject_device_request',requestId:id,note});await renderDeviceRequests()}catch(err){alert(err.message)}}
 async function revokeApprovedDevice(id,name){if(!isSuperAdmin())return;if(!confirm('سحب اعتماد هذا الجهاز من '+name+'؟ سيحتاج موافقة جديدة عند الدخول منه.'))return;try{await callAdminFunction({action:'revoke_device',deviceId:id});await renderApprovedDevices();alert('تم سحب اعتماد الجهاز.')}catch(err){alert(err.message)}}
 let deviceWatchTimer=null;
-function startDeviceWatch(){if(deviceWatchTimer)clearInterval(deviceWatchTimer);if(isSuperAdmin())return;deviceWatchTimer=setInterval(async()=>{try{await verifyCurrentDevice()}catch(e){clearInterval(deviceWatchTimer);await sb.auth.signOut();alert(e.message||'تم إلغاء اعتماد هذا الجهاز.');location.reload()}},300000)}
+function startDeviceWatch(){if(deviceWatchTimer)clearInterval(deviceWatchTimer);if(isSuperAdmin())return;deviceWatchTimer=setInterval(async()=>{if(!navigator.onLine)return;try{await verifyCurrentDevice()}catch(e){clearInterval(deviceWatchTimer);await sb.auth.signOut();alert(e.message||'تم إلغاء اعتماد هذا الجهاز.');location.reload()}},300000)}
 
 async function initAuth(){
   document.querySelector('.app').classList.add('auth-locked');switchAuthMode();
-  const {data:{session}}=await sb.auth.getSession();if(session){try{await enterFromSession();return}catch(e){console.error(e);await sb.auth.signOut()}}
-  document.getElementById('authScreen').classList.add('show')
+  const {data:{session}}=await sb.auth.getSession();
+  if(session){
+    try{await enterFromSession();return}
+    catch(e){console.error(e);if(navigator.onLine)await sb.auth.signOut();else showAuthError(e.message||'تعذر فتح النسخة الأوفلاين.')}
+  }
+  document.getElementById('authScreen').classList.add('show');
+  if(!navigator.onLine&&!session)showAuthError('تسجيل الدخول لأول مرة يحتاج إنترنت. بعد أول دخول يشتغل البرنامج أوفلاين.')
 }
 async function bootApp(){
-  if(appBooted)return;appBooted=true;startDeviceWatch();initNav();colMonthFilter.value=monthNow();reportMonth.value=monthNow();renderAll();showView(isSuperAdmin()?'accounts':'dashboard');if(currentWorkspaceId)setTimeout(()=>showUnpaidAlert(false),450);if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+  if(appBooted)return;appBooted=true;startDeviceWatch();initNav();colMonthFilter.value=monthNow();reportMonth.value=monthNow();renderAll();showView(isSuperAdmin()?'accounts':'dashboard');if(currentWorkspaceId)setTimeout(()=>showUnpaidAlert(false),450);
+  window.addEventListener('offline',()=>showCloudState('أوفلاين — التعديلات تنحفظ على الجهاز','bad'));
+  window.addEventListener('online',async()=>{showCloudState('رجع الإنترنت — جاري المزامنة...');if(currentWorkspaceId&&isOfflineDirty(currentWorkspaceId)){try{await syncRemoteDB()}catch(e){console.error(e);showCloudState('تعذرت المزامنة — ستتم المحاولة لاحقاً','bad')}}});
+  if(!navigator.onLine)showCloudState('أوفلاين — آخر نسخة محفوظة','bad');
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(e=>console.warn('sw',e));
 }
 
 initAuth();
