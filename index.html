@@ -44,11 +44,11 @@
   <div class="auth-card">
     <div class="auth-logo">⚡</div>
     <h1 class="auth-title" id="authTitle">تسجيل الدخول</h1>
-    <div class="auth-sub" id="authSub">أدخل اسم المستخدم وكلمة المرور التي استلمتها من الأدمن الرئيسي.</div>
+    <div class="auth-sub" id="authSub">أدخل اسم المستخدم أو البريد الإلكتروني أو رقم الهاتف، ثم كلمة المرور.</div>
     <div class="auth-error" id="authError"></div>
 
     <form class="auth-form" id="loginForm" onsubmit="loginUser(event)">
-      <div class="auth-field"><label>اسم المستخدم</label><input id="loginUsername" name="generator_login_username" autocomplete="off" autocapitalize="none" spellcheck="false" data-lpignore="true" data-1p-ignore="true" required placeholder="مثال: admin"></div>
+      <div class="auth-field"><label>اسم المستخدم أو البريد أو رقم الهاتف</label><input id="loginIdentifier" name="generator_login_identifier" autocomplete="username" autocapitalize="none" spellcheck="false" data-lpignore="true" data-1p-ignore="true" required placeholder="admin أو name@example.com أو 07xxxxxxxxx"></div>
       <div class="auth-field"><label>كلمة المرور</label><input id="loginPassword" name="generator_login_password" type="password" autocomplete="current-password" data-lpignore="true" data-1p-ignore="true" required placeholder="••••••••"></div>
       <button class="auth-btn" type="submit">دخول</button>
     </form>
@@ -152,7 +152,7 @@
 
 <section class="view" id="accounts">
 <div class="section-title"><div><h2>إدارة الحسابات</h2><p>إنشاء حسابات أصحاب المولدات والتحكم بالدخول</p></div><button class="btn" onclick="openCreateOwnerAccount()">+ إنشاء حساب</button></div>
-<div class="superadmin-note"><b>صلاحية الأدمن الرئيسي:</b> تستطيع إنشاء وتعديل حسابك الرئيسي وحسابات أصحاب المولدات، بما يشمل الاسم واسم المستخدم والبريد والهاتف وكلمة المرور وبيانات المولدة، إضافة إلى الإيقاف أو الحذف.</div>
+<div class="superadmin-note"><b>صلاحية الأدمن الرئيسي:</b> تستطيع إنشاء وتعديل حسابك الرئيسي وحسابات أصحاب المولدات، بما يشمل الاسم واسم المستخدم والبريد والهاتف وكلمة المرور وبيانات المولدة، إضافة إلى الإيقاف أو الحذف. ويمكن تسجيل الدخول باسم المستخدم أو البريد أو رقم الهاتف.</div>
 <div class="accounts-head">
   <div class="mini"><span>إجمالي الحسابات</span><b id="accTotal">0</b></div>
   <div class="mini"><span>الحسابات الفعالة</span><b id="accActive">0</b></div>
@@ -329,17 +329,17 @@ function normalizeUsername(v){return String(v||'').trim().toLowerCase()}
 function currentAccount(){return currentAccountState}
 function showAuthError(msg){const el=document.getElementById('authError');el.textContent=msg;el.classList.add('show')}
 function clearAuthError(){const el=document.getElementById('authError');el.textContent='';el.classList.remove('show')}
-function switchAuthMode(){clearAuthError();document.getElementById('registerForm').style.display='none';document.getElementById('loginForm').style.display='grid';document.getElementById('authTitle').textContent='تسجيل الدخول';document.getElementById('authSub').textContent='أدخل اسم المستخدم والرمز الذي استلمته من الأدمن الرئيسي.';document.getElementById('authSwitch').innerHTML=''}
+function switchAuthMode(){clearAuthError();document.getElementById('registerForm').style.display='none';document.getElementById('loginForm').style.display='grid';document.getElementById('authTitle').textContent='تسجيل الدخول';document.getElementById('authSub').textContent='أدخل اسم المستخدم أو البريد الإلكتروني أو رقم الهاتف، ثم كلمة المرور.';document.getElementById('authSwitch').innerHTML=''}
 function showCloudState(msg,type='ok'){let el=document.getElementById('cloudState');if(!el){el=document.createElement('div');el.id='cloudState';el.style.cssText='position:fixed;left:14px;bottom:76px;z-index:1000;padding:9px 12px;border-radius:10px;font-size:12px;box-shadow:0 4px 16px #0002;transition:.2s';document.body.appendChild(el)}el.textContent=msg;el.style.background=type==='bad'?'#fee2e2':'#dcfce7';el.style.color=type==='bad'?'#991b1b':'#166534';el.style.display='block';clearTimeout(el._t);el._t=setTimeout(()=>el.style.display='none',2400)}
 
 async function loginUser(e){
   e.preventDefault();clearAuthError();
-  const btn=e.target.querySelector('button[type="submit"]'),username=normalizeUsername(document.getElementById('loginUsername').value),password=document.getElementById('loginPassword').value;
-  if(!username||!password)return showAuthError('أدخل اسم المستخدم والرمز.');
+  const btn=e.target.querySelector('button[type="submit"]'),identifier=String(document.getElementById('loginIdentifier').value||'').trim(),password=document.getElementById('loginPassword').value;
+  if(!identifier||!password)return showAuthError('أدخل اسم المستخدم أو البريد أو رقم الهاتف وكلمة المرور.');
   btn.disabled=true;btn.textContent='جاري الدخول...';
   try{
-    const r=await fetch(FN_BASE+'/generator-login',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify({username,password})});
-    const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'اسم المستخدم أو كلمة المرور غير صحيحة.');
+    const r=await fetch(FN_BASE+'/generator-login',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify({identifier,password})});
+    const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'بيانات الدخول غير صحيحة.');
     const {error}=await sb.auth.setSession({access_token:j.access_token,refresh_token:j.refresh_token});if(error)throw error;
     await enterFromSession();
   }catch(err){showAuthError(err.message||'تعذر تسجيل الدخول.')}finally{btn.disabled=false;btn.textContent='دخول'}
@@ -424,7 +424,7 @@ function openCreateOwnerAccount(){
 async function createOwnerAccount(e){
   e.preventDefault();if(!isSuperAdmin())return;const f=new FormData(e.target),name=String(f.get('name')||'').trim(),generatorName=String(f.get('generatorName')||'').trim(),email=String(f.get('email')||'').trim().toLowerCase(),phone=String(f.get('phone')||'').trim(),address=String(f.get('address')||'').trim(),username=normalizeUsername(f.get('username')),password=String(f.get('password')||''),p2=String(f.get('password2')||'');
   if(!name||!generatorName||!username)return alert('أدخل اسم صاحب المولدة واسم المولدة واسم المستخدم.');if(/\s/.test(username))return alert('اسم المستخدم بدون فراغات.');if(password.length<6)return alert('كلمة المرور 6 أحرف أو أرقام على الأقل.');if(password!==p2)return alert('تأكيد كلمة المرور غير مطابق.');
-  const btn=e.target.querySelector('button');btn.disabled=true;btn.textContent='جاري الإنشاء...';try{await callAdminFunction({action:'create',name,generatorName,email,phone,address,username,password});closeModal();await renderAccounts();openModal('تم إنشاء الحساب',`<div class="account-credential-box"><b>سلّم هذه البيانات لصاحب المولدة:</b><br>اسم المستخدم: <code>${esc(username)}</code><br>الرمز: <code>${esc(password)}</code>${email?'<br>البريد: <code>'+esc(email)+'</code>':''}<br>المولدة: <b>${esc(generatorName)}</b></div><div class="note">صاحب المولدة يدخل فقط بالمعرف والرمز، ولا يوجد إنشاء حساب من صفحة الدخول.</div><div style="margin-top:12px"><button class="btn" onclick="closeModal()">تم</button></div>`)}catch(err){alert(err.message)}finally{btn.disabled=false;btn.textContent='إنشاء الحساب'}
+  const btn=e.target.querySelector('button');btn.disabled=true;btn.textContent='جاري الإنشاء...';try{await callAdminFunction({action:'create',name,generatorName,email,phone,address,username,password});closeModal();await renderAccounts();openModal('تم إنشاء الحساب',`<div class="account-credential-box"><b>سلّم هذه البيانات لصاحب المولدة:</b><br>اسم المستخدم: <code>${esc(username)}</code><br>الرمز: <code>${esc(password)}</code>${email?'<br>البريد: <code>'+esc(email)+'</code>':''}<br>المولدة: <b>${esc(generatorName)}</b></div><div class="note">صاحب المولدة يستطيع تسجيل الدخول باسم المستخدم أو البريد الإلكتروني أو رقم الهاتف مع كلمة المرور، ولا يوجد إنشاء حساب من صفحة الدخول.</div><div style="margin-top:12px"><button class="btn" onclick="closeModal()">تم</button></div>`)}catch(err){alert(err.message)}finally{btn.disabled=false;btn.textContent='إنشاء الحساب'}
 }
 function openEditAccount(id){
   if(!isSuperAdmin())return;const a=(window._generatorAccounts||[]).find(x=>x.id===id);if(!a)return alert('تعذر العثور على الحساب.');const admin=a.role==='superadmin';
