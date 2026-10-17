@@ -152,7 +152,7 @@
 
 <section class="view" id="accounts">
 <div class="section-title"><div><h2>إدارة الحسابات</h2><p>إنشاء حسابات أصحاب المولدات والتحكم بالدخول</p></div><button class="btn" onclick="openCreateOwnerAccount()">+ إنشاء حساب</button></div>
-<div class="superadmin-note"><b>صلاحية الأدمن الرئيسي:</b> تستطيع إنشاء وتعديل حسابك الرئيسي وحسابات أصحاب المولدات، بما يشمل الاسم واسم المستخدم والبريد والهاتف وكلمة المرور وبيانات المولدة، إضافة إلى الإيقاف أو الحذف. ويمكن تسجيل الدخول باسم المستخدم أو البريد أو رقم الهاتف.</div>
+<div class="superadmin-note"><b>صلاحية الأدمن الرئيسي:</b> تستطيع الدخول من أي موبايل أو حاسبة بدون تقييد جهاز، وإنشاء وتعديل حسابات أصحاب المولدات. صاحب المولدة يُعتمد له أول جهاز تلقائياً، وأي جهاز إضافي يحتاج موافقتك. ويمكن تسجيل الدخول باسم المستخدم أو البريد أو رقم الهاتف.</div>
 <div class="accounts-head">
   <div class="mini"><span>إجمالي الحسابات</span><b id="accTotal">0</b></div>
   <div class="mini"><span>الحسابات الفعالة</span><b id="accActive">0</b></div>
@@ -164,6 +164,16 @@
 <div class="card">
   <div class="section-title" style="margin-bottom:10px"><div><h3 style="margin:0">طلبات تعديل الحسابات</h3><p>أي تعديل يطلبه صاحب المولدة يبقى معلّقاً إلى أن يوافق الأدمن الرئيسي.</p></div><span class="badge partial" id="pendingAccountRequestsCount">0 معلّق</span></div>
   <div class="table-wrap"><table><thead><tr><th>صاحب الحساب</th><th>نوع الطلب</th><th>التفاصيل</th><th>التاريخ</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody id="accountRequestsBody"></tbody></table></div>
+</div>
+<div style="height:18px"></div>
+<div class="card">
+  <div class="section-title" style="margin-bottom:10px"><div><h3 style="margin:0">طلبات الأجهزة الإضافية</h3><p>أول جهاز لصاحب المولدة يُعتمد تلقائياً. أي جهاز إضافي لا يدخل إلا بعد موافقة الأدمن الرئيسي.</p></div><span class="badge partial" id="pendingDeviceRequestsCount">0 معلّق</span></div>
+  <div class="table-wrap"><table><thead><tr><th>صاحب الحساب</th><th>الجهاز</th><th>وقت الطلب</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody id="deviceRequestsBody"></tbody></table></div>
+</div>
+<div style="height:18px"></div>
+<div class="card">
+  <div class="section-title" style="margin-bottom:10px"><div><h3 style="margin:0">الأجهزة المعتمدة</h3><p>يمكنك سحب اعتماد أي جهاز لصاحب مولدة. الأدمن الرئيسي غير مقيد بعدد الأجهزة.</p></div></div>
+  <div class="table-wrap"><table><thead><tr><th>صاحب الحساب</th><th>الجهاز</th><th>تاريخ الاعتماد</th><th>آخر استخدام</th><th>إجراء</th></tr></thead><tbody id="approvedDevicesBody"></tbody></table></div>
 </div>
 </section>
 
@@ -369,6 +379,16 @@ const sb=supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{pers
 const FN_BASE=SUPABASE_URL+'/functions/v1';
 let appBooted=false,currentAccountState=null,currentProfile=null,currentWorkspaceId=null;
 function normalizeUsername(v){return String(v||'').trim().toLowerCase()}
+function getDeviceId(){
+  const k='generator_device_id_v1';
+  try{let v=localStorage.getItem(k);if(!v){v=(crypto.randomUUID?crypto.randomUUID():'dev-'+Date.now()+'-'+Math.random().toString(36).slice(2));localStorage.setItem(k,v)}return v}catch(e){return 'fallback-'+(navigator.userAgent||'browser').length+'-'+screen.width+'x'+screen.height}
+}
+function getDeviceName(){
+  const ua=navigator.userAgent||'',mobile=/Android|iPhone|iPad|Mobile/i.test(ua),platform=navigator.userAgentData?.platform||navigator.platform||'';
+  let browser='متصفح';if(/Edg\//.test(ua))browser='Edge';else if(/Chrome\//.test(ua))browser='Chrome';else if(/Firefox\//.test(ua))browser='Firefox';else if(/Safari\//.test(ua)&&!/Chrome\//.test(ua))browser='Safari';
+  return (mobile?'موبايل':'حاسبة')+' • '+browser+(platform?' • '+platform:'')
+}
+function currentDevicePayload(){return{device_id:getDeviceId(),device_name:getDeviceName(),user_agent:navigator.userAgent||''}}
 function currentAccount(){return currentAccountState}
 function showAuthError(msg){const el=document.getElementById('authError');el.textContent=msg;el.classList.add('show')}
 function clearAuthError(){const el=document.getElementById('authError');el.textContent='';el.classList.remove('show')}
@@ -381,11 +401,17 @@ async function loginUser(e){
   if(!identifier||!password)return showAuthError('أدخل اسم المستخدم أو البريد أو رقم الهاتف وكلمة المرور.');
   btn.disabled=true;btn.textContent='جاري الدخول...';
   try{
-    const r=await fetch(FN_BASE+'/generator-login',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify({identifier,password})});
+    const device=currentDevicePayload();
+    const r=await fetch(FN_BASE+'/generator-login',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify({identifier,password,...device})});
     const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'بيانات الدخول غير صحيحة.');
     const {error}=await sb.auth.setSession({access_token:j.access_token,refresh_token:j.refresh_token});if(error)throw error;
     await enterFromSession();
   }catch(err){showAuthError(err.message||'تعذر تسجيل الدخول.')}finally{btn.disabled=false;btn.textContent='دخول'}
+}
+async function verifyCurrentDevice(){
+  const {data:{session}}=await sb.auth.getSession();if(!session)throw new Error('انتهت الجلسة. سجل الدخول من جديد.');
+  const r=await fetch(FN_BASE+'/generator-device-check',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify(currentDevicePayload())});
+  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'هذا الجهاز غير معتمد للحساب.');return j
 }
 function registerOwner(e){e.preventDefault();showAuthError('إنشاء الحسابات متاح للأدمن الرئيسي فقط من داخل لوحة الإدارة.')}
 async function loadCurrentProfile(){
@@ -396,6 +422,7 @@ async function loadCurrentProfile(){
   return currentAccountState
 }
 async function enterFromSession(){
+  await verifyCurrentDevice();
   const a=await loadCurrentProfile();if(!a){await sb.auth.signOut();throw new Error('الحساب غير مربوط بنظام المولدات.');}
   if(currentWorkspaceId)await loadRemoteDB();else db=blankDB();
   document.getElementById('authScreen').classList.remove('show');document.querySelector('.app').classList.remove('auth-locked');
@@ -461,6 +488,8 @@ async function renderAccounts(){
   document.getElementById('accTotal').textContent=all.length;document.getElementById('accActive').textContent=all.filter(a=>a.enabled).length;document.getElementById('accDisabled').textContent=all.filter(a=>!a.enabled).length;
   body.innerHTML=arr.length?arr.map((a,i)=>{const admin=a.role==='superadmin',enabled=a.enabled,date=new Date(a.createdAt||Date.now()).toLocaleDateString('ar-IQ');return `<tr><td>${i+1}</td><td><b>${esc(a.name||'-')}</b></td><td>${esc(a.generatorName||'-')}</td><td><b style="direction:ltr;display:inline-block">${esc(a.username)}</b></td><td><span style="direction:ltr;unicode-bidi:isolate;display:inline-block;white-space:nowrap">${esc(a.email||'-')}</span></td><td><span class="phone-nowrap">${esc(a.phone||'-')}</span></td><td><span class="role-badge ${admin?'superadmin':'owner'}">${admin?'أدمن رئيسي':'صاحب مولدة'}</span></td><td><span class="badge ${enabled?'paid':'due'}">${enabled?'فعال':'موقوف'}</span></td><td>${date}</td><td><div class="account-actions"><button class="btn small secondary" onclick="openEditAccount('${a.id}')">تعديل</button>${admin?'':`<button class="btn small ${enabled?'red':'green'}" onclick="toggleOwnerAccount('${a.id}',${enabled})">${enabled?'إيقاف':'تفعيل'}</button><button class="btn small red" onclick="deleteOwnerAccount('${a.id}','${attr(a.name)}')">حذف</button>`}</div></td></tr>`}).join(''):`<tr><td colspan="10" class="empty">لا توجد حسابات</td></tr>`
   await renderAccountRequests();
+  await renderDeviceRequests();
+  await renderApprovedDevices();
 }
 function openCreateOwnerAccount(){
   if(!isSuperAdmin())return;openModal('إنشاء حساب صاحب مولدة',`<form onsubmit="createOwnerAccount(event)"><div class="form-grid"><div class="field"><label>اسم صاحب المولدة *</label><input name="name" required></div><div class="field"><label>اسم المولدة *</label><input name="generatorName" required placeholder="مثال: مولدة النور"></div><div class="field"><label>البريد الإلكتروني</label><input name="email" type="email" autocomplete="off" placeholder="name@example.com"></div><div class="field"><label>رقم الهاتف</label><input name="phone" inputmode="tel" placeholder="07xxxxxxxxx"></div><div class="field"><label>العنوان/المنطقة</label><input name="address"></div><div class="field"><label>اسم المستخدم *</label><input name="username" required autocomplete="off" placeholder="مثال: noor01"></div><div class="field"><label>كلمة المرور *</label><input name="password" type="password" required minlength="6" autocomplete="new-password"></div><div class="field"><label>تأكيد كلمة المرور *</label><input name="password2" type="password" required minlength="6" autocomplete="new-password"></div><div class="full"><button class="btn green">إنشاء الحساب</button></div></div></form>`)
@@ -531,13 +560,31 @@ async function approvePasswordRequest(e,id){
 }
 async function rejectAccountRequest(id){if(!isSuperAdmin())return;const note=prompt('سبب الرفض (اختياري):','')??null;if(note===null)return;try{await callAdminFunction({action:'reject_request',requestId:id,note});await renderAccounts()}catch(err){alert(err.message)}}
 
+async function renderDeviceRequests(){
+  if(!isSuperAdmin())return;const body=document.getElementById('deviceRequestsBody');if(!body)return;body.innerHTML='<tr><td colspan="5" class="empty">جاري تحميل طلبات الأجهزة...</td></tr>';
+  const {data,error}=await sb.from('generator_device_requests').select('*').order('created_at',{ascending:false}).limit(100);if(error){body.innerHTML='<tr><td colspan="5" class="empty">تعذر تحميل طلبات الأجهزة</td></tr>';return}
+  const ac=new Map((window._generatorAccounts||[]).map(a=>[a.id,a]));const pending=(data||[]).filter(r=>r.status==='pending').length;const c=document.getElementById('pendingDeviceRequestsCount');if(c)c.textContent=pending.toLocaleString('ar-IQ')+' معلّق';
+  const sm={pending:['قيد الانتظار','partial'],approved:['تمت الموافقة','paid'],rejected:['مرفوض','due']};
+  body.innerHTML=(data||[]).length?(data||[]).map(r=>{const a=ac.get(r.user_id)||{},st=sm[r.status]||[r.status,''];const actions=r.status==='pending'?`<div class="account-actions"><button class="btn small green" onclick="approveDeviceRequest('${r.id}')">موافقة</button><button class="btn small red" onclick="rejectDeviceRequest('${r.id}')">رفض</button></div>`:'-';return `<tr><td><b>${esc(a.name||a.username||r.user_id)}</b><br><small>${esc(a.generatorName||'')}</small></td><td><b>${esc(r.device_name||'جهاز غير معروف')}</b><br><small title="${attr(r.user_agent||'')}">${esc((r.user_agent||'').slice(0,90))}</small></td><td>${new Date(r.created_at).toLocaleString('ar-IQ')}</td><td><span class="badge ${st[1]}">${st[0]}</span></td><td>${actions}</td></tr>`}).join(''):'<tr><td colspan="5" class="empty">لا توجد طلبات أجهزة</td></tr>'
+}
+async function renderApprovedDevices(){
+  if(!isSuperAdmin())return;const body=document.getElementById('approvedDevicesBody');if(!body)return;body.innerHTML='<tr><td colspan="5" class="empty">جاري تحميل الأجهزة...</td></tr>';
+  const {data,error}=await sb.from('generator_user_devices').select('*').eq('approved',true).order('created_at',{ascending:false});if(error){body.innerHTML='<tr><td colspan="5" class="empty">تعذر تحميل الأجهزة</td></tr>';return}
+  const ac=new Map((window._generatorAccounts||[]).map(a=>[a.id,a]));body.innerHTML=(data||[]).length?(data||[]).map(d=>{const a=ac.get(d.user_id)||{};return `<tr><td><b>${esc(a.name||a.username||d.user_id)}</b><br><small>${esc(a.generatorName||'')}</small></td><td><b>${esc(d.device_name||'جهاز غير معروف')}</b></td><td>${d.approved_at?new Date(d.approved_at).toLocaleString('ar-IQ'):'-'}</td><td>${d.last_seen_at?new Date(d.last_seen_at).toLocaleString('ar-IQ'):'-'}</td><td><button class="btn small red" onclick="revokeApprovedDevice('${d.id}','${attr(a.name||a.username||'الحساب')}')">سحب الاعتماد</button></td></tr>`}).join(''):'<tr><td colspan="5" class="empty">لا توجد أجهزة معتمدة بعد</td></tr>'
+}
+async function approveDeviceRequest(id){if(!isSuperAdmin())return;if(!confirm('الموافقة على هذا الجهاز الإضافي؟'))return;try{await callAdminFunction({action:'approve_device_request',requestId:id});await renderDeviceRequests();await renderApprovedDevices();alert('تم اعتماد الجهاز. يستطيع المستخدم تسجيل الدخول منه الآن.')}catch(err){alert(err.message)}}
+async function rejectDeviceRequest(id){if(!isSuperAdmin())return;const note=prompt('سبب الرفض (اختياري):','');if(note===null)return;try{await callAdminFunction({action:'reject_device_request',requestId:id,note});await renderDeviceRequests()}catch(err){alert(err.message)}}
+async function revokeApprovedDevice(id,name){if(!isSuperAdmin())return;if(!confirm('سحب اعتماد هذا الجهاز من '+name+'؟ سيحتاج موافقة جديدة عند الدخول منه.'))return;try{await callAdminFunction({action:'revoke_device',deviceId:id});await renderApprovedDevices();alert('تم سحب اعتماد الجهاز.')}catch(err){alert(err.message)}}
+let deviceWatchTimer=null;
+function startDeviceWatch(){if(deviceWatchTimer)clearInterval(deviceWatchTimer);if(isSuperAdmin())return;deviceWatchTimer=setInterval(async()=>{try{await verifyCurrentDevice()}catch(e){clearInterval(deviceWatchTimer);await sb.auth.signOut();alert(e.message||'تم إلغاء اعتماد هذا الجهاز.');location.reload()}},300000)}
+
 async function initAuth(){
   document.querySelector('.app').classList.add('auth-locked');switchAuthMode();
   const {data:{session}}=await sb.auth.getSession();if(session){try{await enterFromSession();return}catch(e){console.error(e);await sb.auth.signOut()}}
   document.getElementById('authScreen').classList.add('show')
 }
 async function bootApp(){
-  if(appBooted)return;appBooted=true;initNav();colMonthFilter.value=monthNow();reportMonth.value=monthNow();renderAll();showView(isSuperAdmin()?'accounts':'dashboard');if(currentWorkspaceId)setTimeout(()=>showUnpaidAlert(false),450);if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+  if(appBooted)return;appBooted=true;startDeviceWatch();initNav();colMonthFilter.value=monthNow();reportMonth.value=monthNow();renderAll();showView(isSuperAdmin()?'accounts':'dashboard');if(currentWorkspaceId)setTimeout(()=>showUnpaidAlert(false),450);if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
 
 initAuth();
