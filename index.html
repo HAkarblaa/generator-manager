@@ -32,7 +32,6 @@
   #subscribers .section-title{margin-bottom:9px;align-items:center}#subscribers .section-title h2{font-size:18px}#subscribers .section-title p{font-size:10px}#subscribers .section-title .btn{padding:8px 10px;font-size:11px}#subscribers .toolbar{gap:6px;margin-bottom:7px}#subscribers .search{min-width:0;width:100%;font-size:12px;padding:9px}#subscribers .toolbar .btn{font-size:10px;padding:8px}#subscribers .status-legend{gap:4px;margin-bottom:8px}.legend-item{font-size:9px;padding:5px 6px}
 }
 
-@media print{.top,.side,.mobile-nav,.no-print,.toolbar,.section-title .btn{display:none!important}.layout{display:block}.main{padding:0}.card{box-shadow:none;border:0}.view{display:block!important}body{background:#fff}}
 
 /* ===== تسجيل الدخول والحساب ===== */
 .app.auth-locked{display:none}
@@ -150,9 +149,9 @@
 </section>
 
 <section class="view" id="collections">
-<div class="section-title"><div><h2>الجباية</h2><p>تسجيل المبالغ المستلمة وطباعة الوصل</p></div><button class="btn" onclick="openCollection()">+ جباية جديدة</button></div>
+<div class="section-title"><div><h2>الجباية</h2><p>تسجيل المبالغ المستلمة ومتابعة الجباية</p></div><button class="btn" onclick="openCollection()">+ جباية جديدة</button></div>
 <div class="toolbar"><input id="colSearch" class="search" placeholder="بحث باسم المشترك..." oninput="renderCollections()"><input type="month" id="colMonthFilter" class="search" style="max-width:200px" onchange="renderCollections()"></div>
-<div class="table-wrap"><table><thead><tr><th>المشترك</th><th>الشهر</th><th>المطلوب</th><th>المدفوع</th><th>المتبقي</th><th>التاريخ</th><th>وصل</th><th>حذف</th></tr></thead><tbody id="collectionsBody"></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>المشترك</th><th>الشهر</th><th>المطلوب</th><th>المدفوع</th><th>المتبقي</th><th>التاريخ</th><th>حذف</th></tr></thead><tbody id="collectionsBody"></tbody></table></div>
 </section>
 
 <section class="view" id="debts">
@@ -177,8 +176,8 @@
 </section>
 
 <section class="view" id="reports">
-<div class="section-title"><div><h2>التقارير</h2><p>ملخص مالي وتشغيلي</p></div><button class="btn secondary no-print" onclick="window.print()">طباعة التقرير</button></div>
-<div class="toolbar no-print"><input type="month" id="reportMonth" class="search" style="max-width:220px" onchange="renderReports()"></div>
+<div class="section-title"><div><h2>التقارير</h2><p>ملخص مالي وتشغيلي</p></div></div>
+<div class="toolbar"><input type="month" id="reportMonth" class="search" style="max-width:220px" onchange="renderReports()"></div>
 <div class="grid stats">
   <div class="card stat"><div class="k">إيراد الجباية</div><div class="v money" id="rpIncome">0 د.ع</div></div>
   <div class="card stat"><div class="k">المصاريف</div><div class="v money" id="rpExpenses">0 د.ع</div></div>
@@ -257,13 +256,10 @@
 <div class="field"><label>سعر الأمبير الشهري (د.ع)</label><input id="setAmpPrice" type="number" min="0"></div><div class="field"><label>سعر لتر الكاز الافتراضي (د.ع)</label><input id="setFuelPrice" type="number" min="0"></div>
 <div class="field"><label>سعر لتر الزيت الافتراضي (د.ع)</label><input id="setOilPrice" type="number" min="0"></div><div class="field"><label>أجرة العامل الافتراضية (د.ع)</label><input id="setWorkerCost" type="number" min="0"></div>
 <div class="field"><label>مصروف التشغيل الافتراضي (د.ع)</label><input id="setOperatingCost" type="number" min="0"></div><div class="field"><label>عملة العرض</label><select id="setCurrency"><option value="د.ع">دينار عراقي</option></select></div>
-<div class="field"><label>حجم ورق الطباعة</label><select id="setPrintPaper"><option value="58">كاشير 58mm</option><option value="80">كاشير 80mm</option><option value="a4">A4</option></select></div>
-<div class="field"><label>طابعة الكاشير بالموبايل</label><div style="display:flex;gap:7px;flex-wrap:wrap"><button type="button" class="btn secondary" onclick="chooseBluetoothPrinter()">اختيار طابعة Bluetooth</button><button type="button" class="btn secondary" onclick="openBluetoothPrinterSettings()">إعدادات البلوتوث</button></div><small id="printerStatus" style="color:#64748b;margin-top:5px">لم يتم اختيار طابعة</small></div>
-<div class="full"><div class="note">طباعة 58mm و80mm تكون مباشرة من تطبيق Android بعد ربط طابعة Bluetooth مرة واحدة. خيار A4 يفتح نافذة الطباعة بالنظام لاختيار الطابعة. إعدادات الورق تعمل أوفلاين أيضاً.</div></div>
-<div class="full"><div class="note" id="settingsIdentityNote" style="margin-bottom:10px">هذه الأسعار افتراضية لتسريع الإدخال، ويمكن تغيير السعر داخل كل عملية شراء أو مصروف عند الحاجة.</div><button class="btn green" onclick="saveSettings()">حفظ الإعدادات</button> <button type="button" class="btn secondary" onclick="testPrinter()">طباعة تجريبية</button></div>
+<div class="full"><div class="note" id="settingsIdentityNote" style="margin-bottom:10px">هذه الأسعار افتراضية لتسريع الإدخال، ويمكن تغيير السعر داخل كل عملية شراء أو مصروف عند الحاجة.</div><button class="btn green" onclick="saveSettings()">حفظ الإعدادات</button></div>
 </div></div>
 <div style="height:14px"></div>
-<div class="card no-print"><h3 style="margin-top:0">النسخ الاحتياطي</h3><div class="toolbar"><button class="btn secondary" onclick="exportData()">تنزيل نسخة JSON</button><label class="btn secondary" style="cursor:pointer">استيراد نسخة<input type="file" id="importFile" accept="application/json" hidden onchange="importData(event)"></label><button class="btn red" onclick="resetAll()">مسح كل البيانات</button></div><div class="note">يتم حفظ البيانات في Supabase حسب حساب صاحب المولدة. ويمكن تنزيل نسخة JSON إضافية للاحتياط.</div></div>
+<div class="card"><h3 style="margin-top:0">النسخ الاحتياطي</h3><div class="toolbar"><button class="btn secondary" onclick="exportData()">تنزيل نسخة JSON</button><label class="btn secondary" style="cursor:pointer">استيراد نسخة<input type="file" id="importFile" accept="application/json" hidden onchange="importData(event)"></label><button class="btn red" onclick="resetAll()">مسح كل البيانات</button></div><div class="note">يتم حفظ البيانات في Supabase حسب حساب صاحب المولدة. ويمكن تنزيل نسخة JSON إضافية للاحتياط.</div></div>
 </section>
 <div class="footer-space"></div>
 </main>
@@ -343,9 +339,9 @@ function defaultDB(){
     {id:'m01',title:'تبديل فلتر الوقود',cost:25000,tech:'فني المولدة',date:d(6),notes:'صيانة دورية'},
     {id:'m02',title:'شد وتنظيف السير',cost:50000,tech:'فني المولدة',date:d(12),notes:'صيانة تجريبية'}
   ];
-  return {settings:{name:'مولدة النور — تجريبي',owner:'صاحب المولدة',phone:'0770 000 9999',area:'منطقة تجريبية',ampPrice:18000,fuelPrice:750,oilPrice:7000,workerCost:120000,operatingCost:50000,currency:'د.ع',printPaper:'58'},subscribers,collections,expenses,fuel,maintenance};
+  return {settings:{name:'مولدة النور — تجريبي',owner:'صاحب المولدة',phone:'0770 000 9999',area:'منطقة تجريبية',ampPrice:18000,fuelPrice:750,oilPrice:7000,workerCost:120000,operatingCost:50000,currency:'د.ع'},subscribers,collections,expenses,fuel,maintenance};
 }
-function blankDB(){return {settings:{name:'إدارة المولدة',owner:'',phone:'',area:'',ampPrice:18000,fuelPrice:0,oilPrice:0,workerCost:0,operatingCost:0,currency:'د.ع',printPaper:'58'},subscribers:[],collections:[],expenses:[],fuel:[],maintenance:[]}}
+function blankDB(){return {settings:{name:'إدارة المولدة',owner:'',phone:'',area:'',ampPrice:18000,fuelPrice:0,oilPrice:0,workerCost:0,operatingCost:0,currency:'د.ع'},subscribers:[],collections:[],expenses:[],fuel:[],maintenance:[]}}
 function loadDB(){return blankDB()}
 let syncTimer=null,syncBusy=false,syncQueued=false;
 const OFFLINE_DB_PREFIX='generator_offline_db_v1:';
@@ -409,7 +405,7 @@ function renderDashboard(){const m=monthNow();const income=db.collections.filter
 function renderSubscribers(){const q=(subSearch?.value||'').trim().toLowerCase(),m=monthNow();let arr=db.subscribers.filter(s=>[s.name,s.phone,s.area,s.address,s.fuseNo,ampTypeLabel(s.ampType)].join(' ').toLowerCase().includes(q));subsBody.innerHTML=arr.length?arr.map((s,i)=>{let st=statusFor(s,m),paid=paidFor(s.id,m),due=monthlyDue(s),remain=Math.max(0,due-paid),label=st==='paid'?'دافع':st==='partial'?'دافع جزء':'غير دافع',address=[s.area,s.address].filter(Boolean).join(' - ')||'-';return `<tr class="subscriber-${st}"><td>${i+1}</td><td><b>${esc(s.name)}</b></td><td><b>${s.amps}</b></td><td>${ampTypeBadge(s.ampType)}</td><td>${esc(s.fuseNo||'-')}</td><td>${phoneLink(s.phone)}</td><td><span class="address-nowrap">${esc(address)}</span></td><td><b>${fmt(due)}</b></td><td class="ok-text"><b>${fmt(paid)}</b></td><td class="${remain>0?'danger-text':'ok-text'}"><b>${fmt(remain)}</b></td><td><span class="badge ${st}">${label}</span></td><td><button class="btn small" onclick="openCollection('${s.id}')">دفع</button> <button class="btn small secondary" onclick="openSubscriber('${s.id}')">تعديل</button> <button class="btn small red" onclick="deleteSubscriber('${s.id}')">حذف</button></td></tr>`}).join(''):`<tr><td colspan="12" class="empty">لا يوجد مشتركون</td></tr>`;
   const mobile=document.getElementById('subsMobileCards');if(mobile){mobile.innerHTML=arr.length?arr.map(s=>{let st=statusFor(s,m),paid=paidFor(s.id,m),due=monthlyDue(s),remain=Math.max(0,due-paid),label=st==='paid'?'مدفوع':st==='partial'?'دفع جزئي':'غير مدفوع',address=[s.area,s.address].filter(Boolean).join(' - ')||'-';return `<article class="subscriber-mobile-card ${st}"><div class="subscriber-mobile-top"><div><div class="subscriber-mobile-name">${esc(s.name)}</div><div class="subscriber-mobile-meta">${Number(s.amps||0)} أمبير &nbsp;${ampTypeBadge(s.ampType)}&nbsp; | &nbsp;رقم الجوزة ${esc(s.fuseNo||'-')}<br>📍 ${esc(address)}</div></div><span class="badge ${st}">${label}</span></div><div class="subscriber-mobile-contact">${phoneLink(s.phone)}</div><div class="subscriber-mobile-balance"><span>المطلوب<b>${fmt(due)}</b></span><span>المدفوع<b>${fmt(paid)}</b></span><span>المتبقي<b>${fmt(remain)}</b></span></div><div class="subscriber-mobile-actions"><button class="btn" onclick="openCollection('${s.id}')">تسجيل دفع</button><button class="btn secondary" onclick="openSubscriber('${s.id}')">تعديل</button><button class="btn red" onclick="deleteSubscriber('${s.id}')">حذف</button></div></article>`}).join(''):`<div class="empty">لا يوجد مشتركون</div>`}
 }
-function renderCollections(){const q=(colSearch?.value||'').trim().toLowerCase(),mf=colMonthFilter?.value||'';let arr=[...db.collections].sort((a,b)=>b.createdAt-a.createdAt).filter(c=>{let s=db.subscribers.find(x=>x.id===c.subId);return (!q||(s?.name||'').toLowerCase().includes(q))&&(!mf||c.month===mf)});collectionsBody.innerHTML=arr.length?arr.map(c=>{let s=db.subscribers.find(x=>x.id===c.subId);let due=s?monthlyDue(s):0;let allPaid=s?paidFor(s.id,c.month):c.amount;return `<tr><td>${esc(s?.name||'محذوف')}</td><td>${c.month}</td><td>${fmt(due)}</td><td>${fmt(c.amount)}</td><td>${fmt(Math.max(0,due-allPaid))}</td><td>${c.date}</td><td><button class="btn small secondary" onclick="printReceipt('${c.id}')">طباعة</button></td><td><button class="btn small red" onclick="deleteCollection('${c.id}')">حذف</button></td></tr>`}).join(''):`<tr><td colspan="8" class="empty">لا توجد جبايات</td></tr>`}
+function renderCollections(){const q=(colSearch?.value||'').trim().toLowerCase(),mf=colMonthFilter?.value||'';let arr=[...db.collections].sort((a,b)=>b.createdAt-a.createdAt).filter(c=>{let s=db.subscribers.find(x=>x.id===c.subId);return (!q||(s?.name||'').toLowerCase().includes(q))&&(!mf||c.month===mf)});collectionsBody.innerHTML=arr.length?arr.map(c=>{let s=db.subscribers.find(x=>x.id===c.subId);let due=s?monthlyDue(s):0;let allPaid=s?paidFor(s.id,c.month):c.amount;return `<tr><td>${esc(s?.name||'محذوف')}</td><td>${c.month}</td><td>${fmt(due)}</td><td>${fmt(c.amount)}</td><td>${fmt(Math.max(0,due-allPaid))}</td><td>${c.date}</td><td><button class="btn small red" onclick="deleteCollection('${c.id}')">حذف</button></td></tr>`}).join(''):`<tr><td colspan="7" class="empty">لا توجد جبايات</td></tr>`}
 function renderDebts(){const m=monthNow();let arr=db.subscribers.map(s=>({s,debt:debtForMonth(s,m),paid:paidFor(s.id,m),st:statusFor(s,m)})).filter(x=>x.debt>0).sort((a,b)=>{if(a.st!==b.st)return a.st==='due'?-1:1;return b.debt-a.debt});debtsBody.innerHTML=arr.length?arr.map(x=>{const label=x.st==='due'?'غير دافع':'دافع جزء';return `<tr class="subscriber-${x.st}"><td><b>${esc(x.s.name)}</b></td><td>${phoneLink(x.s.phone)}</td><td>${x.s.amps}</td><td>${ampTypeBadge(x.s.ampType)}</td><td>${fmt(monthlyDue(x.s))}</td><td>${fmt(x.paid)}</td><td class="danger-text"><b>${fmt(x.debt)}</b></td><td><span class="badge ${x.st}">${label}</span></td><td><button class="btn small" onclick="openCollection('${x.s.id}')">تسجيل دفع</button></td></tr>`}).join(''):`<tr><td colspan="9" class="empty">لا توجد ديون لهذا الشهر</td></tr>`}
 function renderExpenses(){let arr=[...db.expenses].sort((a,b)=>(b.date||'').localeCompare(a.date||''));expensesBody.innerHTML=arr.length?arr.map(e=>`<tr><td>${esc(e.type)}</td><td>${esc(e.title)}</td><td>${e.qty??'-'}</td><td>${e.unitPrice!=null?fmt(e.unitPrice):'-'}</td><td>${fmt(e.amount)}</td><td>${e.date}</td><td>${esc(e.notes||'-')}</td><td><button class="btn small red" onclick="deleteExpense('${e.id}')">حذف</button></td></tr>`).join(''):`<tr><td colspan="8" class="empty">لا توجد مصاريف</td></tr>`}
 function renderFuel(){let arr=[...db.fuel].sort((a,b)=>(b.date||'').localeCompare(a.date||''));let liters=arr.reduce((a,e)=>a+Number(e.liters||0),0),cost=arr.reduce((a,e)=>a+Number(e.total||0),0);fuelLiters.textContent=liters.toLocaleString('ar-IQ');fuelCost.textContent=fmt(cost);fuelDefaultPrice.textContent=fmt(db.settings.fuelPrice||0);fuelAvgPrice.textContent=fmt(liters?Math.round(cost/liters):0);fuelBody.innerHTML=arr.length?arr.map(e=>`<tr><td>${e.liters}</td><td>${fmt(e.price)}</td><td>${fmt(e.total)}</td><td>${e.date}</td><td>${esc(e.notes||'-')}</td><td><button class="btn small red" onclick="deleteFuel('${e.id}')">حذف</button></td></tr>`).join(''):`<tr><td colspan="6" class="empty">لا توجد سجلات وقود</td></tr>`}
@@ -436,51 +432,19 @@ function deleteExpense(id){if(confirm('حذف المصروف؟')){db.expenses=db
 function deleteFuel(id){if(confirm('حذف سجل الوقود؟')){db.fuel=db.fuel.filter(x=>x.id!==id);save()}}
 function deleteMaintenance(id){if(confirm('حذف سجل الصيانة؟')){db.maintenance=db.maintenance.filter(x=>x.id!==id);save()}}
 function fillSettings(){
-  setName.value=db.settings.name||'';setOwner.value=db.settings.owner||'';setPhone.value=db.settings.phone||'';setArea.value=db.settings.area||'';setAmpPrice.value=db.settings.ampPrice||0;setFuelPrice.value=db.settings.fuelPrice||0;setOilPrice.value=db.settings.oilPrice||0;setWorkerCost.value=db.settings.workerCost||0;setOperatingCost.value=db.settings.operatingCost||0;setCurrency.value='د.ع';setPrintPaper.value=db.settings.printPaper||'58';refreshPrinterStatus();
+  setName.value=db.settings.name||'';setOwner.value=db.settings.owner||'';setPhone.value=db.settings.phone||'';setArea.value=db.settings.area||'';setAmpPrice.value=db.settings.ampPrice||0;setFuelPrice.value=db.settings.fuelPrice||0;setOilPrice.value=db.settings.oilPrice||0;setWorkerCost.value=db.settings.workerCost||0;setOperatingCost.value=db.settings.operatingCost||0;setCurrency.value='د.ع';
   const locked=!isSuperAdmin();[setName,setOwner,setPhone,setArea].forEach(el=>{el.disabled=locked;el.title=locked?'يتطلب موافقة الأدمن الرئيسي':''});
   const note=document.getElementById('settingsIdentityNote');if(note)note.textContent=locked?'اسم المولدة واسم المالك والهاتف والعنوان لا تتغير مباشرة. استخدم «طلب تعديل الحساب» ليوافق الأدمن الرئيسي. أما الأسعار التشغيلية فيمكنك تعديلها مباشرة.':'يمكن للأدمن الرئيسي تعديل بيانات الحسابات من صفحة إدارة الحسابات.'
 }
 function saveSettings(){
   const identity=isSuperAdmin()?{name:setName.value.trim()||'إدارة المولدة',owner:setOwner.value.trim(),phone:setPhone.value.trim(),area:setArea.value.trim()}:{name:db.settings.name,owner:db.settings.owner,phone:db.settings.phone,area:db.settings.area};
-  db.settings={...db.settings,...identity,ampPrice:Number(setAmpPrice.value||0),fuelPrice:Number(setFuelPrice.value||0),oilPrice:Number(setOilPrice.value||0),workerCost:Number(setWorkerCost.value||0),operatingCost:Number(setOperatingCost.value||0),currency:'د.ع',printPaper:setPrintPaper.value||'58'};save();alert('تم الحفظ')
+  db.settings={...db.settings,...identity,ampPrice:Number(setAmpPrice.value||0),fuelPrice:Number(setFuelPrice.value||0),oilPrice:Number(setOilPrice.value||0),workerCost:Number(setWorkerCost.value||0),operatingCost:Number(setOperatingCost.value||0),currency:'د.ع'};save();alert('تم الحفظ')
 }
 function openSettings(){showView('settings')}
 function exportData(){const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`generator-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
 function importData(ev){const file=ev.target.files[0];if(!file)return;const r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);if(!d.subscribers||!d.settings)throw 0;db=d;save();alert('تم استيراد النسخة')}catch(e){alert('ملف غير صالح')}};r.readAsText(file)}
 function resetAll(){if(confirm('سيتم حذف جميع بيانات هذه المولدة نهائياً من السحابة. متأكد؟')){db=blankDB();save();fillSettings()}}
 function exportSubscribersCSV(){let m=monthNow();let rows=[['الاسم','الأمبيرات','نوع الأمبير','رقم الجوزة','الهاتف','المنطقة','العنوان','الحساب','المدفوع','المتبقي','الحالة'],...db.subscribers.map(s=>{let due=monthlyDue(s),paid=paidFor(s.id,m),remain=Math.max(0,due-paid),st=statusFor(s,m);return[s.name,s.amps,ampTypeLabel(s.ampType),s.fuseNo||'',s.phone,s.area,s.address,due,paid,remain,st==='paid'?'دافع':st==='partial'?'دافع جزء':'غير دافع']})];let csv='\ufeff'+rows.map(r=>r.map(v=>`"${String(v??'').replaceAll('"','""')}"`).join(',')).join('\n');let blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='subscribers.csv';a.click();URL.revokeObjectURL(a.href)}
-function hasAndroidPrinter(){return typeof AndroidPrinter!=='undefined'&&AndroidPrinter&&typeof AndroidPrinter.printReceipt==='function'}
-function refreshPrinterStatus(){
-  const el=document.getElementById('printerStatus');if(!el)return;
-  if(!hasAndroidPrinter()){el.textContent='الطباعة المباشرة Bluetooth متاحة داخل تطبيق Android';return}
-  try{const n=AndroidPrinter.getPrinterName?.()||'';el.textContent=n?'الطابعة المختارة: '+n:'لم يتم اختيار طابعة Bluetooth بعد'}catch(e){el.textContent='جاهز لاختيار طابعة Bluetooth'}
-}
-function onNativePrinterSelected(name){const el=document.getElementById('printerStatus');if(el)el.textContent=name?'الطابعة المختارة: '+name:'لم يتم اختيار طابعة Bluetooth'}
-function chooseBluetoothPrinter(){
-  if(hasAndroidPrinter()&&typeof AndroidPrinter.choosePrinter==='function'){AndroidPrinter.choosePrinter();return}
-  alert('اختيار طابعة Bluetooth مباشرة يعمل من تطبيق Android. بالموقع استخدم طباعة النظام.')
-}
-function openBluetoothPrinterSettings(){
-  if(hasAndroidPrinter()&&typeof AndroidPrinter.openBluetoothSettings==='function'){AndroidPrinter.openBluetoothSettings();return}
-  alert('افتح إعدادات Bluetooth من الجهاز واربط الطابعة، ثم ارجع للبرنامج.')
-}
-function testPrinter(){
-  const paper=(document.getElementById('setPrintPaper')?.value||db.settings.printPaper||'58');
-  const p={paper,generator:db.settings.name||'إدارة المولدة',owner:db.settings.owner||'',ownerPhone:db.settings.phone||'',date:today(),subscriber:'وصل تجريبي',month:monthNow(),amps:'5',ampType:'عادي',fuse:'100',address:db.settings.area||'-',due:'90,000 د.ع',paid:'90,000 د.ع',remain:'0 د.ع',method:'نقدي'};
-  if(hasAndroidPrinter()){AndroidPrinter.printReceipt(JSON.stringify(p));return}
-  alert('الطباعة التجريبية المباشرة متاحة داخل تطبيق Android.')
-}
-function printReceipt(id){
-  let c=db.collections.find(x=>x.id===id),s=db.subscribers.find(x=>x.id===c?.subId);if(!c||!s)return;
-  let due=monthlyDue(s),remain=Math.max(0,due-paidFor(s.id,c.month)),paper=db.settings.printPaper||'58';
-  const payload={paper,generator:db.settings.name||'إدارة المولدة',owner:db.settings.owner||'',ownerPhone:db.settings.phone||'',date:c.date,subscriber:s.name,month:c.month,amps:String(s.amps),ampType:ampTypeLabel(s.ampType),fuse:s.fuseNo||'-',address:[s.area,s.address].filter(Boolean).join(' - ')||'-',due:fmt(due),paid:fmt(c.amount),remain:fmt(remain),method:c.method||'-'};
-  if(hasAndroidPrinter()){
-    try{AndroidPrinter.printReceipt(JSON.stringify(payload));return}catch(e){console.error(e)}
-  }
-  const mm=paper==='58'?58:paper==='80'?80:210,pad=paper==='a4'?14:3,font=paper==='58'?'11px':'13px';
-  let w=window.open('','_blank','width=520,height=760');if(!w){alert('اسمح بفتح نافذة الطباعة من المتصفح');return}
-  w.document.write(`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>وصل قبض</title><style>@page{size:${paper==='a4'?'A4':mm+'mm auto'};margin:${paper==='a4'?'12mm':'2mm'}}*{box-sizing:border-box}body{font-family:Tahoma,Arial,sans-serif;color:#111;margin:0;padding:${pad}mm;font-size:${font};width:${paper==='a4'?'auto':mm+'mm'}}.r{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed #999;padding:6px 0}.r b{text-align:left}h2{text-align:center;margin:4px 0 10px}.box{border:1.5px solid #111;border-radius:8px;padding:8px}.small{color:#555;font-size:.9em;text-align:center;margin-top:12px;line-height:1.6}@media print{body{padding:0}.box{break-inside:avoid}}</style></head><body><div class="box"><h2>${esc(payload.generator)}</h2><div class="r"><span>وصل قبض</span><b>${esc(payload.date)}</b></div><div class="r"><span>المشترك</span><b>${esc(payload.subscriber)}</b></div><div class="r"><span>الشهر</span><b>${esc(payload.month)}</b></div><div class="r"><span>عدد الأمبيرات</span><b>${esc(payload.amps)}</b></div><div class="r"><span>نوع الأمبير</span><b>${esc(payload.ampType)}</b></div><div class="r"><span>رقم الجوزة</span><b>${esc(payload.fuse)}</b></div><div class="r"><span>العنوان</span><b>${esc(payload.address)}</b></div><div class="r"><span>المطلوب</span><b>${esc(payload.due)}</b></div><div class="r"><span>المبلغ المستلم</span><b>${esc(payload.paid)}</b></div><div class="r"><span>المتبقي</span><b>${esc(payload.remain)}</b></div><div class="r"><span>طريقة الدفع</span><b>${esc(payload.method)}</b></div><div class="small">${esc(payload.owner)} ${payload.ownerPhone?'— '+esc(payload.ownerPhone):''}</div></div><script>window.onload=()=>setTimeout(()=>window.print(),150)<\/script></body></html>`);w.document.close()
-}
 function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}function attr(s=''){return esc(s)}
 function phoneHref(v=''){const raw=String(v||'').trim();if(!raw)return'';let clean=raw.replace(/[^0-9+*#]/g,'');if(clean.startsWith('00'))clean='+'+clean.slice(2);return clean}
 function whatsappPhone(v=''){let d=String(v||'').replace(/\D/g,'');if(!d)return'';if(d.startsWith('00964'))d=d.slice(2);else if(d.startsWith('964')){}else if(d.startsWith('0'))d='964'+d.slice(1);else if(d.startsWith('7'))d='964'+d;return d}
