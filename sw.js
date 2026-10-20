@@ -1,4 +1,4 @@
-const CACHE='generator-manager-offline-v9-amp-types';
+const CACHE='generator-manager-offline-v10-printing';
 const SHELL=['./','./index.html','./manifest.json'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE).then(async c=>{for(const u of SHELL){try{await c.add(u)}catch(e){}}}).then(()=>self.skipWaiting()));
